@@ -37,6 +37,10 @@ const expandedLogIds = ref<Set<string>>(new Set());
 // Delete confirmation
 const deleteConfirmLogId = ref<string | null>(null);
 
+// Collapsible sections
+const isOpeningExpanded = ref(true);
+const isClosingExpanded = ref(true);
+
 const dailySales = computed(() => {
   return (closingCash.value - openingCash.value) - expenses.value;
 });
@@ -431,18 +435,72 @@ const saveDailyLog = async () => {
           </div>
         </div>
 
-        <div class="space-y-6">
-          <CashDenominations 
-            label="Opening Float"
-            v-model="openingCash"
-            @update:details="(d) => openingDetails = d"
-          />
+        <div class="space-y-4">
+          <!-- Opening Float - Collapsible -->
+          <div class="border border-surface-700/50 rounded-xl overflow-hidden">
+            <div 
+              class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-800/30 transition-colors"
+              @click="isOpeningExpanded = !isOpeningExpanded"
+            >
+              <div class="flex items-center gap-3">
+                <div class="bg-emerald-500/20 p-2 rounded-lg">
+                  <DollarSign class="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <h4 class="text-sm font-bold text-white">Opening Float</h4>
+                  <p class="text-xs text-surface-500">${{ openingCash.toFixed(2) }}</p>
+                </div>
+              </div>
+              <ChevronDown 
+                v-if="!isOpeningExpanded" 
+                class="w-5 h-5 text-surface-400" 
+              />
+              <ChevronUp 
+                v-else 
+                class="w-5 h-5 text-primary-400" 
+              />
+            </div>
+            <div v-if="isOpeningExpanded" class="p-4 pt-0 border-t border-surface-700/30">
+              <CashDenominations 
+                label=""
+                v-model="openingCash"
+                @update:details="(d) => openingDetails = d"
+              />
+            </div>
+          </div>
           
-          <CashDenominations 
-            label="Closing Drawer"
-            v-model="closingCash"
-            @update:details="(d) => closingDetails = d"
-          />
+          <!-- Closing Drawer - Collapsible -->
+          <div class="border border-surface-700/50 rounded-xl overflow-hidden">
+            <div 
+              class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-800/30 transition-colors"
+              @click="isClosingExpanded = !isClosingExpanded"
+            >
+              <div class="flex items-center gap-3">
+                <div class="bg-blue-500/20 p-2 rounded-lg">
+                  <DollarSign class="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h4 class="text-sm font-bold text-white">Closing Drawer</h4>
+                  <p class="text-xs text-surface-500">${{ closingCash.toFixed(2) }}</p>
+                </div>
+              </div>
+              <ChevronDown 
+                v-if="!isClosingExpanded" 
+                class="w-5 h-5 text-surface-400" 
+              />
+              <ChevronUp 
+                v-else 
+                class="w-5 h-5 text-primary-400" 
+              />
+            </div>
+            <div v-if="isClosingExpanded" class="p-4 pt-0 border-t border-surface-700/30">
+              <CashDenominations 
+                label=""
+                v-model="closingCash"
+                @update:details="(d) => closingDetails = d"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
