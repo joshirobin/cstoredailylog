@@ -41,5 +41,28 @@ export const useSalesStore = defineStore('sales', () => {
         logs.value.unshift(newLog);
     };
 
-    return { logs, addLog };
+    const updateLog = (id: string, updates: Partial<Omit<SalesLog, 'id' | 'date'>>) => {
+        const index = logs.value.findIndex(log => log.id === id);
+        if (index !== -1) {
+            const currentLog = logs.value[index];
+            logs.value[index] = {
+                ...currentLog,
+                ...updates
+            } as SalesLog;
+        }
+    };
+
+    const deleteLog = (id: string) => {
+        logs.value = logs.value.filter(log => log.id !== id);
+    };
+
+    const getLogsByDateRange = (startDate: Date, endDate: Date) => {
+        return logs.value.filter(log => {
+            const logDate = new Date(log.date);
+            return logDate >= startDate && logDate <= endDate;
+        });
+    };
+
+    return { logs, addLog, updateLog, deleteLog, getLogsByDateRange };
 });
+
