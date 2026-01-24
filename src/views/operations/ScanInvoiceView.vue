@@ -160,7 +160,7 @@ onBeforeUnmount(async () => {
       <!-- Upload Zone -->
       <div>
         <div 
-          class="border-2 border-dashed rounded-xl h-80 flex flex-col items-center justify-center transition-all bg-surface-900/50"
+          class="relative border-2 border-dashed rounded-xl h-80 flex flex-col items-center justify-center transition-all bg-surface-900/50"
           :class="isDragging ? 'border-primary-500 bg-primary-500/10' : 'border-surface-700 hover:border-primary-500/50'"
           @dragover.prevent="isDragging = true"
           @dragleave.prevent="isDragging = false"
