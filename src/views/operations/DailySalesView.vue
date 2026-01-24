@@ -10,10 +10,8 @@ import CashDenominations from '../../components/CashDenominations.vue';
 const salesStore = useSalesStore();
 const authStore = useAuthStore();
 
-const openingCash = ref<number | 'custom'>(0);
-const closingCash = ref<number | 'custom'>(0);
-const customOpeningCash = ref<number>(0);
-const customClosingCash = ref<number>(0);
+const openingCash = ref<number>(0);
+const closingCash = ref<number>(0);
 const openingDetails = ref<DenominationCounts | undefined>(undefined);
 const closingDetails = ref<DenominationCounts | undefined>(undefined);
 
@@ -39,17 +37,8 @@ const expandedLogIds = ref<Set<string>>(new Set());
 // Delete confirmation
 const deleteConfirmLogId = ref<string | null>(null);
 
-// Computed properties for actual numeric values
-const openingCashAmount = computed(() => {
-  return openingCash.value === 'custom' ? customOpeningCash.value : (openingCash.value as number);
-});
-
-const closingCashAmount = computed(() => {
-  return closingCash.value === 'custom' ? customClosingCash.value : (closingCash.value as number);
-});
-
 const dailySales = computed(() => {
-  return (closingCashAmount.value - openingCashAmount.value) - expenses.value;
+  return (closingCash.value - openingCash.value) - expenses.value;
 });
 
 const checksTotal = computed(() => {
@@ -159,9 +148,9 @@ const saveDailyLog = async () => {
 
   try {
     const logData = {
-        openingCash: openingCashAmount.value,
+        openingCash: openingCash.value,
         openingDenominations: openingDetails.value,
-        closingCash: closingCashAmount.value,
+        closingCash: closingCash.value,
         closingDenominations: closingDetails.value,
         expenses: expenses.value,
         totalSales: dailySales.value,
@@ -443,77 +432,17 @@ const saveDailyLog = async () => {
         </div>
 
         <div class="space-y-6">
-          <!-- Opening Float -->
-          <div class="space-y-2">
-            <label class="text-sm font-semibold text-surface-300">Opening Float</label>
-            <div class="relative">
-              <span class="absolute left-4 top-3.5 text-surface-500 z-10">$</span>
-              <select 
-                v-model.number="openingCash"
-                class="w-full bg-surface-900 border border-surface-700 rounded-lg px-4 py-3 pl-8 text-base text-white focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 appearance-none cursor-pointer"
-              >
-                <option :value="0">Select amount...</option>
-                <option :value="50">$50.00</option>
-                <option :value="100">$100.00</option>
-                <option :value="150">$150.00</option>
-                <option :value="200">$200.00</option>
-                <option :value="250">$250.00</option>
-                <option :value="300">$300.00</option>
-                <option :value="500">$500.00</option>
-                <option :value="1000">$1,000.00</option>
-                <option value="custom">Custom Amount</option>
-              </select>
-              <ChevronDown class="absolute right-4 top-3.5 w-5 h-5 text-surface-500 pointer-events-none" />
-            </div>
-            <!-- Custom amount input for opening cash -->
-            <div v-if="openingCash === 'custom'" class="relative mt-2">
-              <span class="absolute left-4 top-3 text-surface-500">$</span>
-              <input 
-                v-model.number="customOpeningCash"
-                type="number" 
-                step="0.01"
-                placeholder="Enter custom amount"
-                class="w-full bg-surface-800 border border-surface-700 rounded-lg px-4 py-3 pl-8 text-base text-white placeholder-surface-600 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
-                @blur="openingCash = customOpeningCash || 0"
-              />
-            </div>
-          </div>
+          <CashDenominations 
+            label="Opening Float"
+            v-model="openingCash"
+            @update:details="(d) => openingDetails = d"
+          />
           
-          <!-- Closing Drawer -->
-          <div class="space-y-2">
-            <label class="text-sm font-semibold text-surface-300">Closing Drawer</label>
-            <div class="relative">
-              <span class="absolute left-4 top-3.5 text-surface-500 z-10">$</span>
-              <select 
-                v-model.number="closingCash"
-                class="w-full bg-surface-900 border border-surface-700 rounded-lg px-4 py-3 pl-8 text-base text-white focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 appearance-none cursor-pointer"
-              >
-                <option :value="0">Select amount...</option>
-                <option :value="50">$50.00</option>
-                <option :value="100">$100.00</option>
-                <option :value="150">$150.00</option>
-                <option :value="200">$200.00</option>
-                <option :value="250">$250.00</option>
-                <option :value="300">$300.00</option>
-                <option :value="500">$500.00</option>
-                <option :value="1000">$1,000.00</option>
-                <option value="custom">Custom Amount</option>
-              </select>
-              <ChevronDown class="absolute right-4 top-3.5 w-5 h-5 text-surface-500 pointer-events-none" />
-            </div>
-            <!-- Custom amount input for closing cash -->
-            <div v-if="closingCash === 'custom'" class="relative mt-2">
-              <span class="absolute left-4 top-3 text-surface-500">$</span>
-              <input 
-                v-model.number="customClosingCash"
-                type="number" 
-                step="0.01"
-                placeholder="Enter custom amount"
-                class="w-full bg-surface-800 border border-surface-700 rounded-lg px-4 py-3 pl-8 text-base text-white placeholder-surface-600 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
-                @blur="closingCash = customClosingCash || 0"
-              />
-            </div>
-          </div>
+          <CashDenominations 
+            label="Closing Drawer"
+            v-model="closingCash"
+            @update:details="(d) => closingDetails = d"
+          />
         </div>
       </div>
 
@@ -619,11 +548,11 @@ const saveDailyLog = async () => {
             <div class="space-y-2 text-sm">
               <div class="flex justify-between">
                 <span class="text-surface-400">Opening</span>
-                <span class="font-mono text-white">${{ openingCashAmount.toFixed(2) }}</span>
+                <span class="font-mono text-white">${{ openingCash.toFixed(2) }}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-surface-400">Closing</span>
-                <span class="font-mono text-white">${{ closingCashAmount.toFixed(2) }}</span>
+                <span class="font-mono text-white">${{ closingCash.toFixed(2) }}</span>
               </div>
               <div class="flex justify-between border-t border-surface-700 pt-2">
                 <span class="text-surface-400">Expenses</span>
