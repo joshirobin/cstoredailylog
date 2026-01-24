@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onBeforeUnmount } from 'vue';
 import { UploadCloud, FileText, Check, Loader2, Database, Clock, Sparkles } from 'lucide-vue-next';
 import Tesseract from 'tesseract.js';
 import { useScannedInvoicesStore } from '../../stores/scannedInvoices';
@@ -9,6 +9,9 @@ import { useAuthStore } from '../../stores/auth';
 
 const scannedInvoicesStore = useScannedInvoicesStore();
 const authStore = useAuthStore();
+
+// Store the Tesseract worker for cleanup
+let tesseractWorker: Tesseract.Worker | null = null;
 
 const isDragging = ref(false);
 const isProcessing = ref(false);
@@ -123,6 +126,27 @@ const saveToLog = async () => {
     isSaving.value = false;
   }
 };
+
+// Cleanup when navigating away from the component
+onBeforeUnmount(async () => {
+  // Stop any ongoing processing
+  isProcessing.value = false;
+  
+  // Terminate the Tesseract worker if it exists
+  if (tesseractWorker) {
+    try {
+      await tesseractWorker.terminate();
+      tesseractWorker = null;
+    } catch (error) {
+      console.error('Error terminating Tesseract worker:', error);
+    }
+  }
+  
+  // Clear any file references
+  file.value = null;
+  extractedData.value = null;
+  rawText.value = '';
+});
 </script>
 
 <template>
@@ -177,7 +201,8 @@ const saveToLog = async () => {
           
           <input 
             type="file" 
-            class="absolute inset-0 opacity-0 cursor-pointer" 
+            class="absolute inset-0 opacity-0"
+            :class="file ? 'pointer-events-none cursor-default' : 'cursor-pointer'" 
             accept="image/*"
             @change="onFileSelect"
             :disabled="!!file"
