@@ -5,6 +5,7 @@ import {
     signInWithEmailAndPassword,
     signOut,
     onAuthStateChanged,
+    sendPasswordResetEmail,
     type User
 } from 'firebase/auth';
 import { useRouter } from 'vue-router';
@@ -58,11 +59,20 @@ export const useAuthStore = defineStore('auth', () => {
         router.push('/login');
     };
 
+    const resetPassword = async (email: string) => {
+        try {
+            await sendPasswordResetEmail(auth, email);
+        } catch (error: any) {
+            throw error;
+        }
+    };
+
     return {
         user,
         loading,
         login,
         loginAsDemo,
-        logout
+        logout,
+        resetPassword
     };
 });

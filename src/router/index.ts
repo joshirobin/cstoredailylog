@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/auth'
 
 // Lazy load views
 const LoginView = () => import('../views/auth/LoginView.vue')
+const ForgotPasswordView = () => import('../views/auth/ForgotPasswordView.vue')
 const DashboardLayout = () => import('../layout/DashboardLayout.vue')
 const DashboardView = () => import('../views/dashboard/DashboardView.vue')
 const DailySalesView = () => import('../views/operations/DailySalesView.vue')
@@ -21,6 +22,11 @@ const router = createRouter({
             path: '/login',
             name: 'login',
             component: LoginView
+        },
+        {
+            path: '/forgot-password',
+            name: 'forgot-password',
+            component: ForgotPasswordView
         },
         {
             path: '/',
@@ -80,7 +86,7 @@ router.beforeEach(async (to, _from, next) => {
                 next('/login')
             }
         }
-    } else if (to.path === '/login' && authStore.user) {
+    } else if ((to.path === '/login' || to.path === '/forgot-password') && authStore.user) {
         next('/')
     } else {
         next()

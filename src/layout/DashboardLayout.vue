@@ -15,7 +15,8 @@ const userName = computed(() => {
 
 const userInitials = computed(() => {
   const name = userName.value;
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  if (!name) return '??';
+  return name.split(' ').filter(n => n).map(n => n[0]).join('').toUpperCase().slice(0, 2);
 });
 
 // Notifications Logic

@@ -65,7 +65,12 @@ const handleLogin = async () => {
         </div>
 
         <div class="space-y-1.5">
-          <label class="text-xs font-medium text-surface-400 ml-1">Password</label>
+          <div class="flex items-center justify-between ml-1">
+            <label class="text-xs font-medium text-surface-400">Password</label>
+            <router-link to="/forgot-password" class="text-xs font-semibold text-primary-400 hover:text-primary-300 transition-colors">
+              Forgot password?
+            </router-link>
+          </div>
           <div class="relative">
             <Lock class="absolute left-3 top-2.5 w-5 h-5 text-surface-500" />
             <input 
