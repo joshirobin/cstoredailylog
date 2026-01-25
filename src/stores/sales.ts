@@ -30,29 +30,59 @@ export interface SalesLog {
 
 export const useSalesStore = defineStore('sales', () => {
     const logs = ref<SalesLog[]>([]);
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
-    const addLog = (log: Omit<SalesLog, 'id' | 'date'>) => {
-        const newLog = {
-            ...log,
-            id: Math.random().toString(36).substr(2, 9),
-            date: new Date().toISOString()
-        };
-        // Add to beginning of list
-        logs.value.unshift(newLog);
+    const fetchLogs = async () => {
+        try {
+            const response = await fetch(`${API_URL}/sales`);
+            if (response.ok) {
+                logs.value = await response.json();
+            }
+        } catch (error) {
+            console.error('Failed to fetch sales logs:', error);
+        }
     };
 
-    const updateLog = (id: string, updates: Partial<Omit<SalesLog, 'id' | 'date'>>) => {
-        const index = logs.value.findIndex(log => log.id === id);
-        if (index !== -1) {
-            const currentLog = logs.value[index];
-            logs.value[index] = {
-                ...currentLog,
-                ...updates
-            } as SalesLog;
+    const addLog = async (log: Omit<SalesLog, 'id' | 'date'>) => {
+        try {
+            const date = new Date().toISOString().split('T')[0];
+            const response = await fetch(`${API_URL}/sales`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    date,
+                    opening_cash: log.openingCash,
+                    opening_denominations: log.openingDenominations,
+                    closing_cash: log.closingCash,
+                    closing_denominations: log.closingDenominations,
+                    expenses: log.expenses,
+                    total_sales: log.totalSales,
+                    notes: log.notes,
+                    safe_cash: log.safeCash,
+                    safe_cash_details: log.safeCashDetails,
+                    checks: log.checks,
+                    safe_total: log.safeTotal
+                })
+            });
+            if (response.ok) {
+                await fetchLogs();
+            }
+        } catch (error) {
+            console.error('Failed to save sales log:', error);
+        }
+    };
+
+    const updateLog = async (id: string, updates: Partial<Omit<SalesLog, 'id' | 'date'>>) => {
+        // For simplicity in this demo, we'll just re-save using POST since our server uses merge on date
+        // In a real app, we'd use PUT /api/sales/:id
+        const log = logs.value.find(l => l.id === id);
+        if (log) {
+            await addLog({ ...log, ...updates });
         }
     };
 
     const deleteLog = (id: string) => {
+        // Implement DELETE on server if needed
         logs.value = logs.value.filter(log => log.id !== id);
     };
 
@@ -63,6 +93,6 @@ export const useSalesStore = defineStore('sales', () => {
         });
     };
 
-    return { logs, addLog, updateLog, deleteLog, getLogsByDateRange };
+    return { logs, fetchLogs, addLog, updateLog, deleteLog, getLogsByDateRange };
 });
 

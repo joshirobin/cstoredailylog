@@ -3,12 +3,13 @@ import { ref, onBeforeUnmount } from 'vue';
 import { UploadCloud, FileText, Check, Loader2, Database, Clock, Sparkles } from 'lucide-vue-next';
 import Tesseract from 'tesseract.js';
 import { useScannedInvoicesStore } from '../../stores/scannedInvoices';
-import { db } from '../../firebaseConfig';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { useAuthStore } from '../../stores/auth';
+import { onMounted } from 'vue';
 
 const scannedInvoicesStore = useScannedInvoicesStore();
-const authStore = useAuthStore();
+
+onMounted(() => {
+  scannedInvoicesStore.fetchScannedInvoices();
+});
 
 // Store the Tesseract worker for cleanup
 let tesseractWorker: Tesseract.Worker | null = null;
@@ -101,19 +102,8 @@ const saveToLog = async () => {
       date: new Date().toISOString()
     };
 
-    // Check if Demo Mode
-    if (authStore.user && 'uid' in authStore.user && authStore.user.uid.startsWith('demo-')) {
-      // Save to local store
-      scannedInvoicesStore.addScannedInvoice(scanData);
-      await new Promise(r => setTimeout(r, 500));
-    } else {
-      // Save to Firestore
-      await addDoc(collection(db, 'scanned_invoices'), {
-        ...scanData,
-        createdAt: serverTimestamp(),
-        userId: authStore.user?.uid
-      });
-    }
+    // Use the backend API via the store
+    await scannedInvoicesStore.addScannedInvoice(scanData);
 
     // Reset the form
     file.value = null;
@@ -272,7 +262,7 @@ onBeforeUnmount(async () => {
     <div v-if="scannedInvoicesStore?.scannedInvoices?.length > 0" class="glass-panel p-6">
       <div class="flex items-center gap-3 mb-5">
         <Clock class="w-5 h-5 text-surface-400" />
-        <h3 class="text-lg font-bold text-white">Scan History (This Session)</h3>
+        <h3 class="text-lg font-bold text-white">Recent Scan History</h3>
       </div>
       
       <div class="space-y-3">

@@ -174,7 +174,7 @@ const saveInvoice = async () => {
   // Simulate network delay for a better feel
   await new Promise(resolve => setTimeout(resolve, 800));
 
-  invoicesStore.addInvoice({
+  await invoicesStore.addInvoice({
     accountId: selectedAccountId.value as string,
     accountName: account.name,
     date: (date.value || new Date().toISOString().split('T')[0]) as string,
@@ -209,7 +209,7 @@ const sendEmail = async () => {
 
   isSendingEmail.value = true;
   try {
-    const invoiceId = invoicesStore.addInvoice({
+    const invoiceId = await invoicesStore.addInvoice({
       accountId: selectedAccountId.value as string,
       accountName: account.name,
       date: (date.value || new Date().toISOString().split('T')[0]) as string,

@@ -2,7 +2,6 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { useAccountsStore } from './accounts';
 
 export interface InvoiceItem {
     id: string;
@@ -39,29 +38,60 @@ export interface Invoice {
 
 export const useInvoicesStore = defineStore('invoices', () => {
     const invoices = ref<Invoice[]>([]);
-    const accountsStore = useAccountsStore();
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
-    const addInvoice = (invoice: Omit<Invoice, 'id'>) => {
-        const newInvoice = {
-            ...invoice,
-            id: `INV-${Date.now().toString().slice(-6)}`
-        };
-        invoices.value.unshift(newInvoice);
-
-        // Update Account Balance (Demo Simulation)
-        const account = accountsStore.accounts.find(a => a.id == invoice.accountId);
-        if (account) {
-            account.balance += invoice.total;
+    const fetchInvoices = async () => {
+        try {
+            const response = await fetch(`${API_URL}/invoices`);
+            if (response.ok) {
+                // In a production app, we'd map snake_case from DB to camelCase here
+                invoices.value = await response.json();
+            }
+        } catch (error) {
+            console.error('Failed to fetch invoices:', error);
         }
+    };
 
-        return newInvoice.id;
+    const addInvoice = async (invoice: Omit<Invoice, 'id'>) => {
+        const id = `INV-${Date.now().toString().slice(-6)}`;
+        try {
+            const response = await fetch(`${API_URL}/invoices`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id,
+                    account_id: invoice.accountId,
+                    account_name: invoice.accountName,
+                    date: invoice.date,
+                    due_date: invoice.dueDate,
+                    subtotal: invoice.subtotal,
+                    tax: invoice.tax,
+                    total: invoice.total,
+                    status: invoice.status,
+                    recipient_email: invoice.recipientEmail,
+                    items: invoice.items.map(i => ({
+                        description: i.description,
+                        qty: i.qty,
+                        price: i.price,
+                        total: i.total
+                    }))
+                })
+            });
+            if (response.ok) {
+                await fetchInvoices();
+                // Update local account balance if needed, though server should ideally handle this
+                return id;
+            }
+        } catch (error) {
+            console.error('Failed to save invoice:', error);
+        }
+        return id;
     };
 
     const generateInvoicePDF = (invoice: Invoice) => {
         const doc = new jsPDF();
-        const primaryColor = [14, 165, 233] as [number, number, number]; // #0ea5e9
+        const primaryColor = [14, 165, 233] as [number, number, number];
 
-        // Header
         doc.setFontSize(24);
         doc.setTextColor(...primaryColor);
         doc.text('INVOICE', 160, 20, { align: 'right' });
@@ -72,17 +102,15 @@ export const useInvoicesStore = defineStore('invoices', () => {
         doc.text(`Date: ${invoice.date}`, 160, 33, { align: 'right' });
         doc.text(`Due: ${invoice.dueDate}`, 160, 38, { align: 'right' });
 
-        // Company Info
         doc.setFontSize(12);
         doc.setTextColor(0);
-        doc.text('C-Store Daily Ops', 14, 20);
+        doc.text('C-Store Daily Ops', 140, 20);
         doc.setFontSize(10);
         doc.setTextColor(100);
-        doc.text('123 Gas Station Blvd', 14, 26);
-        doc.text('Cityville, ST 12345', 14, 31);
-        doc.text('billing@cstoredaily.com', 14, 36);
+        doc.text('123 Gas Station Blvd', 140, 26);
+        doc.text('Cityville, ST 12345', 140, 31);
+        doc.text('billing@cstoredaily.com', 140, 36);
 
-        // Bill To
         doc.setDrawColor(200);
         doc.line(14, 45, 196, 45);
         doc.setFontSize(11);
@@ -90,30 +118,27 @@ export const useInvoicesStore = defineStore('invoices', () => {
         doc.text('BILL TO:', 14, 55);
         doc.setFontSize(10);
         doc.text(invoice.accountName, 14, 62);
-        // In real app, we'd fetch address from account ID
 
-        // Table
         autoTable(doc, {
             startY: 70,
             head: [['Item Description', 'Qty', 'Unit Price', 'Amount']],
             body: invoice.items.map(item => [
                 item.description,
                 item.qty.toString(),
-                `$${item.price.toFixed(2)}`,
-                `$${item.total.toFixed(2)}`
+                `$${Number(item.price).toFixed(2)}`,
+                `$${Number(item.total).toFixed(2)}`
             ]),
             theme: 'grid',
             headStyles: { fillColor: primaryColor },
             foot: [
-                ['', '', 'Subtotal', `$${invoice.subtotal.toFixed(2)}`],
-                ['', '', 'Tax (8%)', `$${invoice.tax.toFixed(2)}`],
-                ['', '', 'Total', `$${invoice.total.toFixed(2)}`]
+                ['', '', 'Subtotal', `$${Number(invoice.subtotal).toFixed(2)}`],
+                ['', '', 'Tax (8%)', `$${Number(invoice.tax).toFixed(2)}`],
+                ['', '', 'Total', `$${Number(invoice.total).toFixed(2)}`]
             ],
             footStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'right' },
-            columnStyles: { 3: { halign: 'right' } } // Right align amount column
+            columnStyles: { 3: { halign: 'right' } }
         });
 
-        // Save
         doc.save(`${invoice.id}_${invoice.accountName.split(' ')[0]}.pdf`);
     };
 
@@ -155,28 +180,16 @@ export const useInvoicesStore = defineStore('invoices', () => {
         const invoice = invoices.value.find(inv => inv.id === invoiceId);
         if (!invoice) return false;
 
-        // Simulate email sending (in production, use EmailJS, SendGrid, or Firebase Cloud Functions)
-        console.log('📧 Sending email...');
-        console.log('To:', recipientEmail);
-        console.log('Subject:', `Invoice ${invoice.id}`);
-        console.log('Invoice Details:', {
-            id: invoice.id,
-            accountName: invoice.accountName,
-            total: `$${invoice.total.toFixed(2)}`,
-            dueDate: invoice.dueDate,
-            attachments: invoice.attachments?.length || 0
-        });
-
         // Simulate network delay
         await new Promise(resolve => setTimeout(resolve, 1500));
 
-        // Update invoice status
+        // Update invoice locally
         invoice.emailSent = true;
         invoice.sentDate = new Date().toISOString();
         invoice.recipientEmail = recipientEmail;
         invoice.status = 'Sent';
 
-        console.log('✅ Email sent successfully!');
+        // In production, we'd hit PUT /api/invoices/:id here
         return true;
     };
 
@@ -184,5 +197,5 @@ export const useInvoicesStore = defineStore('invoices', () => {
         invoices.value = invoices.value.filter(inv => inv.id !== id);
     };
 
-    return { invoices, addInvoice, generateInvoicePDF, attachFileToInvoice, removeAttachment, sendInvoiceEmail, removeInvoice };
+    return { invoices, fetchInvoices, addInvoice, generateInvoicePDF, attachFileToInvoice, removeAttachment, sendInvoiceEmail, removeInvoice };
 });
