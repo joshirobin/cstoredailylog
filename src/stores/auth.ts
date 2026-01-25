@@ -3,6 +3,8 @@ import { ref, onMounted } from 'vue';
 import { auth } from '../firebaseConfig';
 import {
     signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    updateProfile,
     signOut,
     onAuthStateChanged,
     sendPasswordResetEmail,
@@ -67,12 +69,26 @@ export const useAuthStore = defineStore('auth', () => {
         }
     };
 
+    const register = async (email: string, pass: string, name: string) => {
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+            await updateProfile(userCredential.user, {
+                displayName: name
+            });
+            // Force refresh user in store
+            user.value = userCredential.user;
+        } catch (error: any) {
+            throw error;
+        }
+    };
+
     return {
         user,
         loading,
         login,
         loginAsDemo,
         logout,
-        resetPassword
+        resetPassword,
+        register
     };
 });
