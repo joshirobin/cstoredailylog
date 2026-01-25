@@ -59,6 +59,21 @@ export const useInvoicesStore = defineStore('invoices', () => {
         }
     };
 
+    const fetchInvoicesByAccount = async (accountId: string) => {
+        try {
+            const { where } = await import('firebase/firestore');
+            // Try querying. Note: Composite index might be needed for where() + orderBy()
+            // Just filtering in memory if list is small, or use simple query.
+            // Let's use Firestore query.
+            const q = query(collection(db, 'invoices'), where('accountId', '==', accountId));
+            const querySnapshot = await getDocs(q);
+            return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invoice));
+        } catch (error) {
+            console.error('Failed to fetch account invoices:', error);
+            return [];
+        }
+    };
+
     const addInvoice = async (invoice: Omit<Invoice, 'id'>) => {
         const id = `INV-${Date.now().toString().slice(-6)}`;
         try {
@@ -77,6 +92,17 @@ export const useInvoicesStore = defineStore('invoices', () => {
                 attachments: invoice.attachments || [],
                 createdAt: new Date().toISOString()
             });
+
+            // Update Account Balance
+            // We need to import increment dynamically or at top-level. 
+            // It's cleaner to use the imported functions if available.
+            // Let's assume we can add update logic here.
+            const { increment } = await import('firebase/firestore');
+            const accountRef = doc(db, 'accounts', String(invoice.accountId));
+            await updateDoc(accountRef, {
+                balance: increment(Number(invoice.total) || 0)
+            });
+
             await fetchInvoices();
             return id;
         } catch (error) {
@@ -225,5 +251,5 @@ export const useInvoicesStore = defineStore('invoices', () => {
         }
     };
 
-    return { invoices, fetchInvoices, addInvoice, generateInvoicePDF, attachFileToInvoice, removeAttachment, sendInvoiceEmail, removeInvoice };
+    return { invoices, fetchInvoices, fetchInvoicesByAccount, addInvoice, generateInvoicePDF, attachFileToInvoice, removeAttachment, sendInvoiceEmail, removeInvoice };
 });

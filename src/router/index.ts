@@ -37,7 +37,11 @@ const router = createRouter({
                 { path: 'accounts/new', name: 'create-account', component: CreateAccountView },
                 { path: 'scan', name: 'scan', component: ScanInvoiceView },
                 { path: 'invoices', name: 'invoices', component: InvoicesListView },
-                { path: 'invoices/new', name: 'create-invoice', component: CreateInvoiceView }
+                { path: 'invoices/new', name: 'create-invoice', component: CreateInvoiceView },
+                { path: 'payments', name: 'payments', component: () => import('../views/payments/PaymentsView.vue') },
+                { path: 'payments/new', name: 'create-payment', component: () => import('../views/payments/CreatePaymentView.vue') },
+                { path: 'fuel', name: 'fuel', component: () => import('../views/operations/FuelInventoryView.vue') },
+                { path: 'lottery', name: 'lottery', component: () => import('../views/operations/LotteryReconciliationView.vue') }
             ]
         }
     ]

@@ -26,6 +26,8 @@ export interface SalesLog {
     safeCashDetails?: DenominationCounts;
     checks?: Check[];
     safeTotal?: number;
+    lottoReport?: string; // URL to attachment
+    otherReport?: string; // URL to attachment
 }
 
 import { db } from '../firebaseConfig';
@@ -44,13 +46,12 @@ export const useSalesStore = defineStore('sales', () => {
         }
     };
 
-    const addLog = async (log: Omit<SalesLog, 'id' | 'date'>) => {
+    const addLog = async (log: Omit<SalesLog, 'id'>) => {
         try {
-            const date = new Date().toISOString().split('T')[0];
+            const date = log.date;
             // Use date as document ID to ensure one log per day
-            await setDoc(doc(db, 'sales_logs', date as string), {
+            await setDoc(doc(db, 'sales_logs', date), {
                 ...log,
-                date,
                 updatedAt: new Date().toISOString()
             });
             await fetchLogs();
@@ -59,7 +60,7 @@ export const useSalesStore = defineStore('sales', () => {
         }
     };
 
-    const updateLog = async (id: string, updates: Partial<Omit<SalesLog, 'id' | 'date'>>) => {
+    const updateLog = async (id: string, updates: Partial<Omit<SalesLog, 'id'>>) => {
         try {
             const logRef = doc(db, 'sales_logs', id); // ID acts as the date string here ideally, or the original ID
             // Since we use date as ID in addLog, 'id' here might be the date.
@@ -79,9 +80,18 @@ export const useSalesStore = defineStore('sales', () => {
     };
 
     const getLogsByDateRange = (startDate: Date, endDate: Date) => {
+        const toYMD = (d: Date) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        const start = toYMD(startDate);
+        const end = toYMD(endDate);
+
         return logs.value.filter(log => {
-            const logDate = new Date(log.date);
-            return logDate >= startDate && logDate <= endDate;
+            return log.date >= start && log.date <= end;
         });
     };
 

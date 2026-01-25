@@ -8,8 +8,13 @@ import {
   Receipt,
   FileText,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  CreditCard,
+  Droplet,
+  Ticket
 } from 'lucide-vue-next';
+
+// ...
 import { useAuthStore } from '../stores/auth';
 
 const route = useRoute();
@@ -18,8 +23,11 @@ const authStore = useAuthStore();
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Daily Sales', href: '/sales', icon: Banknote },
+  { name: 'Fuel Inventory', href: '/fuel', icon: Droplet },
+  { name: 'Lottery', href: '/lottery', icon: Ticket },
   { name: 'Accounts', href: '/accounts', icon: Users },
   { name: 'Invoices', href: '/invoices', icon: FileText },
+  { name: 'Payments', href: '/payments', icon: CreditCard },
   { name: 'Scan Invoice', href: '/scan', icon: ScanLine },
 ];
 

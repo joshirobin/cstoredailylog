@@ -51,8 +51,12 @@ onMounted(() => {
     if (items.value[0]) {
       items.value[0].price = total;
       items.value[0].total = total;
-      items.value[0].description = 'Scanned Receipt Item';
+      items.value[0].description = (route.query.scannedDesc as string) || 'Scanned Receipt Item';
     }
+  }
+
+  if (route.query.scannedAccountId) {
+    selectedAccountId.value = route.query.scannedAccountId as string;
   }
 
   if (route.query.scannedDate) {

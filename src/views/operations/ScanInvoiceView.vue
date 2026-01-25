@@ -1,14 +1,20 @@
 <script setup lang="ts">
-import { ref, onBeforeUnmount } from 'vue';
-import { UploadCloud, FileText, Check, Loader2, Database, Clock, Sparkles } from 'lucide-vue-next';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { UploadCloud, FileText, Check, Loader2, Database, Clock, Sparkles, ExternalLink } from 'lucide-vue-next';
 import Tesseract from 'tesseract.js';
 import { useScannedInvoicesStore } from '../../stores/scannedInvoices';
-import { onMounted } from 'vue';
+import { useAccountsStore } from '../../stores/accounts';
+import { useRouter } from 'vue-router';
 
 const scannedInvoicesStore = useScannedInvoicesStore();
+const accountsStore = useAccountsStore();
+const router = useRouter();
 
-onMounted(() => {
-  scannedInvoicesStore.fetchScannedInvoices();
+onMounted(async () => {
+  await Promise.all([
+    scannedInvoicesStore.fetchScannedInvoices(),
+    accountsStore.fetchAccounts()
+  ]);
 });
 
 // Store the Tesseract worker for cleanup
@@ -17,10 +23,17 @@ let tesseractWorker: Tesseract.Worker | null = null;
 const isDragging = ref(false);
 const isProcessing = ref(false);
 const file = ref<File | null>(null);
-const extractedData = ref<{ total: string | null, date: string | null } | null>(null);
+const extractedData = ref<{ total: string | null, date: string | null, description: string, accountId: string } | null>(null);
 const rawText = ref('');
 const progress = ref(0);
 const isSaving = ref(false);
+
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Set worker source (using CDN for simplicity/compatibility)
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+
+// ... references ...
 
 const onDrop = (e: DragEvent) => {
   isDragging.value = false;
@@ -28,7 +41,7 @@ const onDrop = (e: DragEvent) => {
     const droppedFile = e.dataTransfer.files[0];
     if (droppedFile) {
       file.value = droppedFile;
-      processImage(droppedFile);
+      processFile(droppedFile); // Renamed
     }
   }
 };
@@ -39,20 +52,41 @@ const onFileSelect = (e: Event) => {
     const selectedFile = target.files[0];
     if (selectedFile) {
       file.value = selectedFile;
-      processImage(selectedFile);
+      processFile(selectedFile); // Renamed
     }
   }
 };
 
-const processImage = async (imageFile: File) => {
+const processFile = async (fileToProcess: File) => {
   isProcessing.value = true;
   extractedData.value = null;
   rawText.value = '';
   progress.value = 0;
+  
+  let imageSource: File | string = fileToProcess;
 
   try {
+    // PDF Handling
+    if (fileToProcess.type === 'application/pdf') {
+        progress.value = 10; // Started PDF conversion
+        const arrayBuffer = await fileToProcess.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const page = await pdf.getPage(1); // Get first page
+        
+        const viewport = page.getViewport({ scale: 2.0 }); // Higher scale for better OCR
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        if (context) {
+            await page.render({ canvasContext: context, viewport: viewport } as any).promise;
+            imageSource = canvas.toDataURL('image/png');
+        }
+    }
+
     const result = await Tesseract.recognize(
-      imageFile,
+      imageSource,
       'eng',
       { 
         logger: m => {
@@ -64,6 +98,8 @@ const processImage = async (imageFile: File) => {
     );
 
     rawText.value = result.data.text;
+    const lines = result.data.text.split('\n').filter((line: string) => line.trim().length > 3);
+// ... Rest of logic stays same basically
     
     // Simple regex for demo purposes to find $ totals
     const moneyRegex = /\$?\d+\.\d{2}/g;
@@ -74,15 +110,38 @@ const processImage = async (imageFile: File) => {
     const dateMatches = result.data.text.match(dateRegex);
     
     const totalMatch = matches && matches.length > 0 ? matches[matches.length - 1] : '$0.00';
-    const dateMatch = dateMatches && dateMatches.length > 0 ? dateMatches[0] : new Date().toLocaleDateString();
+    const dateMatch = dateMatches && dateMatches.length > 0 ? dateMatches[0] : new Date().toISOString().split('T')[0];
+    
+    // Attempt to guess description: First meaningful line that isn't a date or total
+    let descriptionGuess = 'General Purchase';
+    for (const line of lines) {
+        if (!line.match(dateRegex) && !line.match(moneyRegex) && line.length > 5) {
+            descriptionGuess = line.trim();
+            break;
+        }
+    }
+
+    // Attempt to guess account matching
+    // Search raw text for account names
+    let matchedAccountId = '';
+    const lowerText = rawText.value.toLowerCase();
+    for (const acc of accountsStore.accounts) {
+        if (lowerText.includes(acc.name.toLowerCase())) {
+            matchedAccountId = String(acc.id);
+            break;
+        }
+    }
 
     extractedData.value = {
       total: totalMatch || '$0.00',
-      date: dateMatch || ''
+      date: dateMatch || '',
+      description: descriptionGuess,
+      accountId: matchedAccountId
     };
 
   } catch (error) {
     console.error(error);
+    alert('Error processing file. If using PDF, ensure it is not password protected.');
   } finally {
     isProcessing.value = false;
   }
@@ -98,12 +157,14 @@ const saveToLog = async () => {
       fileName: file.value.name,
       total: extractedData.value.total || '$0.00',
       extractedDate: extractedData.value.date || '',
+      description: extractedData.value.description,
+      accountName: accountsStore.accounts.find(a => String(a.id) === extractedData.value?.accountId)?.name || 'Unknown',
       rawText: rawText.value,
       date: new Date().toISOString()
     };
 
     // Use the backend API via the store
-    await scannedInvoicesStore.addScannedInvoice(scanData);
+    await scannedInvoicesStore.addScannedInvoice(scanData, file.value || undefined);
 
     // Reset the form
     file.value = null;
@@ -115,6 +176,20 @@ const saveToLog = async () => {
   } finally {
     isSaving.value = false;
   }
+};
+
+// ... existing cleanup ...
+const handleConvertToInvoice = () => {
+    if (!extractedData.value) return;
+    router.push({ 
+        path: '/invoices/new', 
+        query: { 
+            scannedTotal: extractedData.value.total ? extractedData.value.total.replace('$', '') : '0', 
+            scannedDate: extractedData.value.date,
+            scannedDesc: extractedData.value.description,
+            scannedAccountId: extractedData.value.accountId
+        } 
+    });
 };
 
 // Cleanup when navigating away from the component
@@ -193,7 +268,7 @@ onBeforeUnmount(async () => {
             type="file" 
             class="absolute inset-0 opacity-0"
             :class="file ? 'pointer-events-none cursor-default' : 'cursor-pointer'" 
-            accept="image/*"
+            accept="image/*,application/pdf"
             @change="onFileSelect"
             :disabled="!!file"
           />
@@ -207,9 +282,9 @@ onBeforeUnmount(async () => {
           <span class="text-xs bg-primary-500/10 text-primary-400 px-2 py-1 rounded border border-primary-500/20">AI Confidence: 85%</span>
         </div>
 
-        <div v-if="extractedData" class="space-y-6 flex-1">
+        <div v-if="extractedData" class="space-y-4 flex-1">
            <div class="space-y-1.5">
-             <label class="text-xs font-medium text-surface-400 ml-1">Total Amount Found</label>
+             <label class="text-xs font-medium text-surface-400 ml-1">Total Amount</label>
              <input v-model="extractedData.total" class="input-field w-full text-lg font-bold text-emerald-400" />
            </div>
 
@@ -217,17 +292,32 @@ onBeforeUnmount(async () => {
              <label class="text-xs font-medium text-surface-400 ml-1">Invoice Date</label>
              <input v-model="extractedData.date" class="input-field w-full" />
            </div>
+
+           <div class="space-y-1.5">
+             <label class="text-xs font-medium text-surface-400 ml-1">Description</label>
+             <input v-model="extractedData.description" class="input-field w-full" />
+           </div>
+
+           <div class="space-y-1.5">
+             <label class="text-xs font-medium text-surface-400 ml-1">Matched Account</label>
+              <select v-model="extractedData.accountId" class="input-field w-full">
+                 <option value="">Select Account...</option>
+                 <option v-for="acc in accountsStore.accounts" :key="acc.id" :value="acc.id">
+                     {{ acc.name }}
+                 </option>
+             </select>
+           </div>
            
-           <div class="space-y-1.5 flex-1">
+           <div class="space-y-1.5">
              <label class="text-xs font-medium text-surface-400 ml-1">Raw Text Output</label>
              <textarea 
                v-model="rawText" 
-               class="input-field w-full h-32 text-xs font-mono text-surface-300" 
+               class="input-field w-full h-20 text-xs font-mono text-surface-300" 
                readonly
              ></textarea>
            </div>
            
-           <div class="grid grid-cols-2 gap-4 mt-auto">
+           <div class="grid grid-cols-2 gap-4 mt-auto pt-2">
               <button 
                 @click="saveToLog"
                 :disabled="isSaving"
@@ -237,13 +327,7 @@ onBeforeUnmount(async () => {
                 <span>{{ isSaving ? 'Saving...' : 'Save to Log' }}</span>
               </button>
               <button 
-                @click="$router.push({ 
-                  path: '/invoices/new', 
-                  query: { 
-                    scannedTotal: extractedData?.total ? extractedData.total.replace('$', '') : '0', 
-                    scannedDate: extractedData?.date 
-                  } 
-                })" 
+                @click="handleConvertToInvoice" 
                 class="btn-primary w-full text-center flex items-center justify-center gap-2"
               >
                 <span>Convert to Invoice</span>
@@ -283,9 +367,21 @@ onBeforeUnmount(async () => {
               </div>
             </div>
           </div>
-          <div class="text-right">
-            <div class="text-xl font-bold font-mono text-emerald-400">{{ scan.total }}</div>
-            <div class="text-xs text-surface-500">Total Found</div>
+          <div class="text-right flex flex-col items-end gap-2">
+            <div>
+              <div class="text-xl font-bold font-mono text-emerald-400">{{ scan.total }}</div>
+              <div class="text-xs text-surface-500">Total Found</div>
+            </div>
+            <a 
+                v-if="scan.fileUrl" 
+                :href="scan.fileUrl" 
+                target="_blank" 
+                class="flex items-center gap-1.5 text-xs text-primary-400 hover:text-primary-300 font-medium bg-primary-500/10 px-2 py-1 rounded hover:bg-primary-500/20 transition-colors"
+                @click.stop
+            >
+                <ExternalLink class="w-3 h-3" />
+                View Receipt
+            </a>
           </div>
         </div>
       </div>

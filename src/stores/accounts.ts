@@ -45,9 +45,9 @@ export const useAccountsStore = defineStore('accounts', () => {
         }
     };
 
-    const generateStatement = (account: Account) => {
+    const generateStatement = (account: Account, transactions: any[]) => {
         const doc = new jsPDF();
-        // ... (remaining generateStatement logic)
+        // ... (rest of setup)
         doc.setFontSize(22);
         doc.setTextColor(14, 165, 233);
         doc.text('STATEMENT', 14, 20);
@@ -73,20 +73,28 @@ export const useAccountsStore = defineStore('accounts', () => {
         doc.text(account.contact, 14, 67);
         if (account.address) doc.text(account.address, 14, 72);
         doc.text(account.email, 14, 77);
-        const transactions = [
-            { date: '2024-01-05', desc: 'Fuel - Truck #12', amount: 120.50 },
-            { date: '2024-01-08', desc: 'Store Supplies', amount: 45.00 },
-            { date: '2024-01-12', desc: 'Fuel - Truck #05', amount: 210.00 },
-        ];
+
         autoTable(doc, {
             startY: 85,
-            head: [['Date', 'Description', 'Amount']],
-            body: transactions.map(t => [t.date, t.desc, `$${t.amount.toFixed(2)}`]),
+            head: [['Date', 'Description', 'Ref', 'Amount', 'Type']],
+            body: transactions.map(t => [
+                t.date,
+                t.desc,
+                t.ref || '-',
+                `$${Math.abs(t.amount).toFixed(2)}`,
+                t.amount < 0 ? 'PAYMENT' : 'INVOICE'
+            ]),
             theme: 'grid',
             headStyles: { fillColor: [14, 165, 233] },
-            foot: [['', 'Total Balance', `$${Number(account.balance).toFixed(2)}`]],
+            // Highlight payments rows?
+            didParseRow: (data: any) => {
+                if (data.row.raw[4] === 'PAYMENT') {
+                    data.row.styles.textColor = [22, 163, 74]; // Green for payments
+                }
+            },
+            foot: [['', '', '', 'Total Balance', `$${Number(account.balance).toFixed(2)}`]],
             footStyles: { fillColor: [241, 245, 249], textColor: [0, 0, 0], fontStyle: 'bold' }
-        });
+        } as any);
         doc.save(`Statement_${account.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
     };
 

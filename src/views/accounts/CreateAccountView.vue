@@ -24,12 +24,12 @@ const simulateScan = () => {
   isScanning.value = true;
   setTimeout(() => {
     form.value = {
-      businessName: 'Acme Trucking Co.',
-      contactName: 'John Smith',
-      email: 'billing@acmetrucking.com',
-      phone: '555-0123',
-      address: '123 Industrial Pkwy, Springfield',
-      creditLimit: 10000,
+      businessName: '',
+      contactName: '',
+      email: '',
+      phone: '',
+      address: '',
+      creditLimit: 0,
     };
     isScanning.value = false;
     showSuccess.value = true;

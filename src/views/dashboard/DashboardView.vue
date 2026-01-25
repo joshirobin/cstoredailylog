@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onMounted, computed } from 'vue';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -9,53 +10,86 @@ import {
   Plus,
   UserPlus
 } from 'lucide-vue-next';
+import { useSalesStore } from '../../stores/sales';
+import { useAccountsStore } from '../../stores/accounts';
+import { useInvoicesStore } from '../../stores/invoices';
 
-// Mock Data for Dashboard
-const stats = [
+const salesStore = useSalesStore();
+const accountsStore = useAccountsStore();
+const invoicesStore = useInvoicesStore();
+
+onMounted(async () => {
+    await Promise.all([
+        salesStore.fetchLogs(),
+        accountsStore.fetchAccounts(),
+        invoicesStore.fetchInvoices()
+    ]);
+});
+
+// Real Data Calculations
+const todayDate = new Date().toISOString().split('T')[0];
+
+const totalSalesToday = computed(() => {
+    const todayLog = salesStore.logs.find(l => l.date === todayDate);
+    return todayLog ? todayLog.totalSales : 0;
+});
+
+const activeAccountsCount = computed(() => accountsStore.accounts.length);
+
+const pendingInvoicesCount = computed(() => {
+    return invoicesStore.invoices.filter(i => i.status !== 'Paid').length;
+});
+
+const outstandingBalance = computed(() => {
+    // Total Balance of all charge accounts
+    return accountsStore.accounts.reduce((sum, acc) => {
+        const balance = Number(acc.balance);
+        return sum + (isNaN(balance) ? 0 : balance);
+    }, 0);
+});
+
+
+// Mock Data for Dashboard (Mapped to Real Computeds)
+const stats = computed(() => [
   { 
     title: 'Total Sales Today', 
-    value: '$4,235.50', 
-    change: '+12.5%', 
-    trend: 'up',
+    value: `$${totalSalesToday.value.toFixed(2)}`, 
+    change: 'Today', 
+    trend: 'neutral',
     icon: DollarSign,
     color: 'text-emerald-400',
     bg: 'bg-emerald-400/10'
   },
   { 
     title: 'Active Accounts', 
-    value: '142', 
-    change: '+3 new', 
-    trend: 'up',
+    value: activeAccountsCount.value.toString(), 
+    change: 'Total', 
+    trend: 'neutral',
     icon: Users,
     color: 'text-primary-400',
     bg: 'bg-primary-400/10'
   },
   { 
     title: 'Pending Invoices', 
-    value: '8', 
-    change: '-2 from yesterday', 
-    trend: 'down',
+    value: pendingInvoicesCount.value.toString(), 
+    change: 'Unpaid', 
+    trend: 'neutral',
     icon: FileText,
     color: 'text-amber-400',
     bg: 'bg-amber-400/10'
   },
   { 
     title: 'Outstanding Balance', 
-    value: '$12,450.00', 
-    change: '+5.2%', 
-    trend: 'up',
+    value: `$${outstandingBalance.value.toFixed(2)}`, 
+    change: 'Total Owed', 
+    trend: 'neutral',
     icon: CreditCard,
     color: 'text-secondary-400',
     bg: 'bg-secondary-400/10'
   },
-];
+]);
 
-const recentActivity = [
-  { id: 1, user: 'John Doe', action: 'Created Invoice #1024', time: '2 mins ago', amount: '$150.00' },
-  { id: 2, user: 'Jane Smith', action: 'Added Daily Sales Log', time: '1 hour ago', amount: '$4,235.50' },
-  { id: 3, user: 'System', action: 'Generated Monthly Statements', time: '4 hours ago', amount: null },
-  { id: 4, user: 'John Doe', action: 'New Account: Green Logistics', time: 'Yesterday', amount: null },
-];
+const recentActivity: any[] = []; // Can populate with recent logs/invoices later if needed
 </script>
 
 <template>

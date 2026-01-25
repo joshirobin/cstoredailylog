@@ -86,25 +86,7 @@ const handleLogin = async () => {
           <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin" />
           <span>{{ isSubmitting ? 'Signing in...' : 'Sign In' }}</span>
         </button>
-        
-        <div class="relative flex py-2 items-center">
-            <div class="flex-grow border-t border-surface-700"></div>
-            <span class="flex-shrink-0 mx-4 text-xs text-surface-500">Or try without account</span>
-            <div class="flex-grow border-t border-surface-700"></div>
-        </div>
-
-        <button 
-          type="button" 
-          @click="authStore.loginAsDemo()"
-          class="btn-secondary w-full flex items-center justify-center gap-2"
-        >
-          <span>Enter Demo Mode (No Auth)</span>
-        </button>
       </form>
-      
-      <div class="mt-6 text-center text-xs text-surface-500">
-        Demo Account: <span class="text-surface-400">admin@cstoredaily.com</span>
-      </div>
     </div>
   </div>
 </template>

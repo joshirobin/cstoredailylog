@@ -3,10 +3,37 @@ import { RouterLink } from 'vue-router';
 import { UserPlus, FileText, Mail, MoreHorizontal } from 'lucide-vue-next';
 import { useAccountsStore, type Account } from '../../stores/accounts';
 
-const accountsStore = useAccountsStore();
+import { useInvoicesStore } from '../../stores/invoices';
+import { usePaymentsStore } from '../../stores/payments';
 
-const handleGeneratePDF = (account: Account) => {
-  accountsStore.generateStatement(account);
+const accountsStore = useAccountsStore();
+const invoicesStore = useInvoicesStore();
+const paymentsStore = usePaymentsStore();
+
+const handleGeneratePDF = async (account: Account) => {
+  // Fetch data
+  const invoices = await invoicesStore.fetchInvoicesByAccount(String(account.id));
+  const payments = await paymentsStore.fetchPaymentsByAccount(String(account.id));
+
+  // Map to common format
+  const invoiceTxns = invoices.map(i => ({
+      date: i.date,
+      desc: `Invoice #${i.id} - ${i.status.toUpperCase()}`,
+      ref: i.id,
+      amount: i.total
+  }));
+
+  const paymentTxns = payments.map(p => ({
+      date: p.date,
+      desc: `Payment - ${p.method}`,
+      ref: p.reference,
+      amount: -Math.abs(p.amount)
+  }));
+
+  // Combine and Sort
+  const transactions = [...invoiceTxns, ...paymentTxns].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  accountsStore.generateStatement(account, transactions);
 };
 
 const handleEmail = (account: Account) => {
