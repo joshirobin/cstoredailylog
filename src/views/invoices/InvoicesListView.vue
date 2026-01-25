@@ -46,7 +46,7 @@ const getStatusIcon = (status: string) => {
 };
 
 const handleDownloadPDF = (invoice: Invoice) => {
-  invoicesStore.generateInvoicePDF(invoice);
+  invoicesStore.downloadInvoicePDF(invoice);
 };
 
 const handleSendEmail = async (invoice: Invoice) => {

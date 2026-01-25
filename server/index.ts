@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import knex from 'knex';
 import knexConfig from './knexfile.js';
+import nodemailer from 'nodemailer';
 
 dotenv.config();
 
@@ -10,7 +11,19 @@ const app = express();
 const db = knex(knexConfig);
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Email Transporter
+const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST,
+    port: Number(process.env.EMAIL_PORT),
+    secure: process.env.EMAIL_PORT === '465',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
+});
 
 // --- ACCOUNTS ---
 app.get('/api/accounts', async (req, res) => {
@@ -105,6 +118,41 @@ app.post('/api/scanned-logs', async (req, res) => {
         res.json({ id });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+// --- EMAIL INTEGRATION ---
+app.post('/api/send-email', async (req, res) => {
+    const { to, subject, body, attachments } = req.body;
+
+    if (!to || !subject) {
+        return res.status(400).json({ error: 'Recipients and subject are required.' });
+    }
+
+    try {
+        const mailOptions: any = {
+            from: process.env.EMAIL_FROM || '"C-Store Daily" <billing@cstoredaily.com>',
+            to,
+            subject,
+            text: body,
+            html: body.replace(/\n/g, '<br>'),
+        };
+
+        if (attachments && Array.isArray(attachments)) {
+            mailOptions.attachments = attachments.map((att: any) => ({
+                filename: att.name,
+                content: att.data.split('base64,')[1],
+                encoding: 'base64',
+                contentType: att.type
+            }));
+        }
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Email sent: ' + info.messageId);
+        res.json({ success: true, messageId: info.messageId });
+    } catch (err: any) {
+        console.error('Email error:', err);
+        res.status(500).json({ error: 'Failed to send email: ' + err.message });
     }
 });
 

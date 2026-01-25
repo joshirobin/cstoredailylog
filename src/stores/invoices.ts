@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export interface InvoiceItem {
@@ -162,6 +162,11 @@ export const useInvoicesStore = defineStore('invoices', () => {
             columnStyles: { 3: { halign: 'right' } }
         });
 
+        return doc;
+    };
+
+    const downloadInvoicePDF = (invoice: Invoice) => {
+        const doc = generateInvoicePDF(invoice);
         doc.save(`${invoice.id}_${invoice.accountName.split(' ')[0]}.pdf`);
     };
 
@@ -227,6 +232,39 @@ export const useInvoicesStore = defineStore('invoices', () => {
 
     const sendInvoiceEmail = async (invoiceId: string, recipientEmail: string): Promise<boolean> => {
         try {
+            const invoice = invoices.value.find(inv => inv.id === invoiceId);
+            if (!invoice) return false;
+
+            const pdfDoc = generateInvoicePDF(invoice);
+            const pdfBase64 = pdfDoc.output('datauristring');
+
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}/api/send-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    to: recipientEmail,
+                    subject: `Invoice ${invoice.id} from C-Store Daily`,
+                    body: `Hello,\n\nPlease find attached invoice ${invoice.id} for ${invoice.accountName}.\n\nTotal Due: $${invoice.total.toFixed(2)}\nDue Date: ${invoice.dueDate}\n\nThank you for your business!`,
+                    attachments: [
+                        {
+                            name: `${invoice.id}.pdf`,
+                            data: pdfBase64,
+                            type: 'application/pdf'
+                        },
+                        ...(invoice.attachments || []).map(a => ({
+                            name: a.name,
+                            data: a.dataUrl,
+                            type: a.type
+                        }))
+                    ]
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Failed to send email');
+            }
+
             const invoiceRef = doc(db, 'invoices', invoiceId);
             await updateDoc(invoiceRef, {
                 emailSent: true,
@@ -236,8 +274,9 @@ export const useInvoicesStore = defineStore('invoices', () => {
             });
             await fetchInvoices(); // Refresh local state
             return true;
-        } catch (error) {
-            console.error('Failed to update invoice status:', error);
+        } catch (error: any) {
+            console.error('Failed to send invoice email:', error);
+            alert(`Error: ${error.message}`);
             return false;
         }
     };
@@ -251,5 +290,5 @@ export const useInvoicesStore = defineStore('invoices', () => {
         }
     };
 
-    return { invoices, fetchInvoices, fetchInvoicesByAccount, addInvoice, generateInvoicePDF, attachFileToInvoice, removeAttachment, sendInvoiceEmail, removeInvoice };
+    return { invoices, fetchInvoices, fetchInvoicesByAccount, addInvoice, generateInvoicePDF, downloadInvoicePDF, attachFileToInvoice, removeAttachment, sendInvoiceEmail, removeInvoice };
 });

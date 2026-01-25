@@ -45,6 +45,7 @@ const otherFile = ref<File | null>(null);
 // UI Expansion State
 const isOpeningExpanded = ref(false);
 const isClosingExpanded = ref(false);
+const isSafeExpanded = ref(false);
 
 // Date Navigation for Logic
 const selectedDate = ref<string>(new Date().toISOString().split('T')[0] as string);
@@ -432,10 +433,16 @@ const saveDailyLog = async () => {
 
           <!-- Section 2: Safe & Checks -->
           <div class="section-card">
-            <div class="section-header justify-between">
+            <div 
+              class="section-header justify-between cursor-pointer hover:bg-surface-800/40 transition-colors"
+              @click="isSafeExpanded = !isSafeExpanded"
+            >
               <div class="flex items-center gap-4">
                 <div class="section-icon bg-amber-500/10 text-amber-400"><Vault class="w-5 h-5" /></div>
-                <h3 class="text-white font-bold text-lg">Safe Deposit</h3>
+                <div class="flex items-center gap-2">
+                  <h3 class="text-white font-bold text-lg">Safe Deposit</h3>
+                  <component :is="isSafeExpanded ? ChevronUp : ChevronDown" class="w-4 h-4 text-surface-500" />
+                </div>
               </div>
               <div class="text-right">
                 <span class="text-[10px] text-surface-500 uppercase font-bold block mb-0.5">Deposit Total</span>
@@ -443,7 +450,7 @@ const saveDailyLog = async () => {
               </div>
             </div>
             
-            <div class="p-6 space-y-8">
+            <div v-if="isSafeExpanded" class="animate-in fade-in slide-in-from-top-2 duration-300">
               <CashDenominations label="Deposit Pickup" v-model="safeCash" @update:details="(d) => safeDetails = d" />
               
               <div class="bg-surface-900/40 rounded-2xl p-6 border border-surface-800">

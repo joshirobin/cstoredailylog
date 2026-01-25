@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export interface Account {
@@ -95,8 +95,49 @@ export const useAccountsStore = defineStore('accounts', () => {
             foot: [['', '', '', 'Total Balance', `$${Number(account.balance).toFixed(2)}`]],
             footStyles: { fillColor: [241, 245, 249], textColor: [0, 0, 0], fontStyle: 'bold' }
         } as any);
+
+        return doc;
+    };
+
+    const downloadStatement = (account: Account, transactions: any[]) => {
+        const doc = generateStatement(account, transactions);
         doc.save(`Statement_${account.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
     };
 
-    return { accounts, fetchAccounts, addAccount, generateStatement };
+    const sendStatementEmail = async (account: Account, transactions: any[]) => {
+        try {
+            const doc = generateStatement(account, transactions);
+            const pdfBase64 = doc.output('datauristring');
+
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}/api/send-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    to: account.email,
+                    subject: `Account Statement - ${account.name}`,
+                    body: `Hello ${account.contact},\n\nPlease find your latest account statement attached.\n\nCurrent Balance: $${account.balance.toFixed(2)}\n\nThank you for your business!`,
+                    attachments: [
+                        {
+                            name: `Statement_${account.name.replace(/\s+/g, '_')}.pdf`,
+                            data: pdfBase64,
+                            type: 'application/pdf'
+                        }
+                    ]
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Failed to send email');
+            }
+
+            return true;
+        } catch (error: any) {
+            console.error('Failed to send statement email:', error);
+            alert(`Error: ${error.message}`);
+            return false;
+        }
+    };
+
+    return { accounts, fetchAccounts, addAccount, generateStatement, downloadStatement, sendStatementEmail };
 });

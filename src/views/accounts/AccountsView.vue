@@ -33,11 +33,27 @@ const handleGeneratePDF = async (account: Account) => {
   // Combine and Sort
   const transactions = [...invoiceTxns, ...paymentTxns].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  accountsStore.generateStatement(account, transactions);
+  accountsStore.downloadStatement(account, transactions);
 };
 
-const handleEmail = (account: Account) => {
-  alert(`Simulated: Emailing statement to ${account.email}`);
+const handleEmail = async (account: Account) => {
+  // Fetch transactions first
+  const invoices = await invoicesStore.fetchInvoicesByAccount(String(account.id));
+  const payments = await paymentsStore.fetchPaymentsByAccount(String(account.id));
+  
+  const invoiceTxns = invoices.map(i => ({ date: i.date, desc: `Invoice #${i.id}`, ref: i.id, amount: i.total }));
+  const paymentTxns = payments.map(p => ({ date: p.date, desc: `Payment - ${p.method}`, ref: p.reference, amount: -Math.abs(p.amount) }));
+  const transactions = [...invoiceTxns, ...paymentTxns].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  if (!account.email) {
+    alert('No email address found for this account.');
+    return;
+  }
+
+  const success = await accountsStore.sendStatementEmail(account, transactions);
+  if (success) {
+    alert(`Statement sent successfully to ${account.email}`);
+  }
 };
 </script>
 
