@@ -36,16 +36,23 @@ export interface Invoice {
     recipientEmail?: string;
 }
 
+import { db } from '../firebaseConfig';
+import { collection, getDocs, setDoc, updateDoc, doc, query, orderBy, deleteDoc } from 'firebase/firestore';
+
 export const useInvoicesStore = defineStore('invoices', () => {
     const invoices = ref<Invoice[]>([]);
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
     const fetchInvoices = async () => {
         try {
-            const response = await fetch(`${API_URL}/invoices`);
-            if (response.ok) {
-                // In a production app, we'd map snake_case from DB to camelCase here
-                invoices.value = await response.json();
+            // Sort by createdAt desc, fallback to date desc (client side if needed, but here queries are simple)
+            const q = query(collection(db, 'invoices'), orderBy('createdAt', 'desc'));
+            const querySnapshot = await getDocs(q);
+            // If query is empty, try sorting by date
+            if (querySnapshot.empty) {
+                const fallbackSnapshot = await getDocs(query(collection(db, 'invoices'), orderBy('date', 'desc')));
+                invoices.value = fallbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invoice));
+            } else {
+                invoices.value = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invoice));
             }
         } catch (error) {
             console.error('Failed to fetch invoices:', error);
@@ -55,33 +62,23 @@ export const useInvoicesStore = defineStore('invoices', () => {
     const addInvoice = async (invoice: Omit<Invoice, 'id'>) => {
         const id = `INV-${Date.now().toString().slice(-6)}`;
         try {
-            const response = await fetch(`${API_URL}/invoices`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id,
-                    account_id: invoice.accountId,
-                    account_name: invoice.accountName,
-                    date: invoice.date,
-                    due_date: invoice.dueDate,
-                    subtotal: invoice.subtotal,
-                    tax: invoice.tax,
-                    total: invoice.total,
-                    status: invoice.status,
-                    recipient_email: invoice.recipientEmail,
-                    items: invoice.items.map(i => ({
-                        description: i.description,
-                        qty: i.qty,
-                        price: i.price,
-                        total: i.total
-                    }))
-                })
+            await setDoc(doc(db, 'invoices', id), {
+                id,
+                accountId: invoice.accountId,
+                accountName: invoice.accountName,
+                date: invoice.date,
+                dueDate: invoice.dueDate,
+                subtotal: invoice.subtotal,
+                tax: invoice.tax,
+                total: invoice.total,
+                status: invoice.status,
+                recipientEmail: invoice.recipientEmail,
+                items: invoice.items.map(i => ({ ...i })),
+                attachments: invoice.attachments || [],
+                createdAt: new Date().toISOString()
             });
-            if (response.ok) {
-                await fetchInvoices();
-                // Update local account balance if needed, though server should ideally handle this
-                return id;
-            }
+            await fetchInvoices();
+            return id;
         } catch (error) {
             console.error('Failed to save invoice:', error);
         }
@@ -142,26 +139,40 @@ export const useInvoicesStore = defineStore('invoices', () => {
         doc.save(`${invoice.id}_${invoice.accountName.split(' ')[0]}.pdf`);
     };
 
-    const attachFileToInvoice = (invoiceId: string, file: File): Promise<void> => {
+    const attachFileToInvoice = async (invoiceId: string, file: File): Promise<void> => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload = (e) => {
-                const invoice = invoices.value.find(inv => inv.id === invoiceId);
-                if (invoice) {
-                    if (!invoice.attachments) {
-                        invoice.attachments = [];
+            reader.onload = async (e) => {
+                const dataUrl = e.target?.result as string;
+                const attachment: Attachment = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                    dataUrl
+                };
+
+                // Update Firestore
+                try {
+                    const invoiceRef = doc(db, 'invoices', invoiceId);
+                    // We need to get the current attachments first or use arrayUnion
+                    // But arrayUnion with large objects (base64) is fine?
+                    // Let's just find the local invoice and update it then save whole array or use arrayUnion
+                    // arrayUnion is safer for concurrency
+                    const { arrayUnion } = await import('firebase/firestore');
+                    await updateDoc(invoiceRef, {
+                        attachments: arrayUnion(attachment)
+                    });
+
+                    // Update local state
+                    const invoice = invoices.value.find(inv => inv.id === invoiceId);
+                    if (invoice) {
+                        if (!invoice.attachments) invoice.attachments = [];
+                        invoice.attachments.push(attachment);
                     }
-                    const attachment: Attachment = {
-                        id: Math.random().toString(36).substr(2, 9),
-                        name: file.name,
-                        size: file.size,
-                        type: file.type,
-                        dataUrl: e.target?.result as string
-                    };
-                    invoice.attachments.push(attachment);
                     resolve();
-                } else {
-                    reject(new Error('Invoice not found'));
+                } catch (err) {
+                    reject(err);
                 }
             };
             reader.onerror = () => reject(new Error('Failed to read file'));
@@ -169,32 +180,49 @@ export const useInvoicesStore = defineStore('invoices', () => {
         });
     };
 
-    const removeAttachment = (invoiceId: string, attachmentId: string) => {
+    const removeAttachment = async (invoiceId: string, attachmentId: string) => {
         const invoice = invoices.value.find(inv => inv.id === invoiceId);
         if (invoice && invoice.attachments) {
-            invoice.attachments = invoice.attachments.filter(a => a.id !== attachmentId);
+            const attachmentToRemove = invoice.attachments.find(a => a.id === attachmentId);
+            if (!attachmentToRemove) return;
+
+            try {
+                const { arrayRemove } = await import('firebase/firestore');
+                const invoiceRef = doc(db, 'invoices', invoiceId);
+                await updateDoc(invoiceRef, {
+                    attachments: arrayRemove(attachmentToRemove)
+                });
+                invoice.attachments = invoice.attachments.filter(a => a.id !== attachmentId);
+            } catch (error) {
+                console.error('Failed to remove attachment:', error);
+            }
         }
     };
 
     const sendInvoiceEmail = async (invoiceId: string, recipientEmail: string): Promise<boolean> => {
-        const invoice = invoices.value.find(inv => inv.id === invoiceId);
-        if (!invoice) return false;
-
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // Update invoice locally
-        invoice.emailSent = true;
-        invoice.sentDate = new Date().toISOString();
-        invoice.recipientEmail = recipientEmail;
-        invoice.status = 'Sent';
-
-        // In production, we'd hit PUT /api/invoices/:id here
-        return true;
+        try {
+            const invoiceRef = doc(db, 'invoices', invoiceId);
+            await updateDoc(invoiceRef, {
+                emailSent: true,
+                sentDate: new Date().toISOString(),
+                recipientEmail,
+                status: 'Sent'
+            });
+            await fetchInvoices(); // Refresh local state
+            return true;
+        } catch (error) {
+            console.error('Failed to update invoice status:', error);
+            return false;
+        }
     };
 
-    const removeInvoice = (id: string) => {
-        invoices.value = invoices.value.filter(inv => inv.id !== id);
+    const removeInvoice = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, 'invoices', id));
+            invoices.value = invoices.value.filter(inv => inv.id !== id);
+        } catch (error) {
+            console.error('Failed to delete invoice:', error);
+        }
     };
 
     return { invoices, fetchInvoices, addInvoice, generateInvoicePDF, attachFileToInvoice, removeAttachment, sendInvoiceEmail, removeInvoice };

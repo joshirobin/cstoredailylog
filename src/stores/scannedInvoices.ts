@@ -11,16 +11,24 @@ export interface ScannedInvoice {
     createdAt: string;
 }
 
+import { db } from '../firebaseConfig';
+import { collection, addDoc, getDocs, query, orderBy } from 'firebase/firestore';
+
 export const useScannedInvoicesStore = defineStore('scannedInvoices', () => {
     const scannedInvoices = ref<ScannedInvoice[]>([]);
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
     const fetchScannedInvoices = async () => {
         try {
-            const response = await fetch(`${API_URL}/scanned-logs`);
-            if (response.ok) {
-                scannedInvoices.value = await response.json();
-            }
+            const q = query(collection(db, 'scanned_logs'), orderBy('createdAt', 'desc'));
+            const querySnapshot = await getDocs(q);
+            scannedInvoices.value = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    // Handle Firestore Timestamp if needed, but we save as ISO string mostly or convert
+                } as ScannedInvoice;
+            });
         } catch (error) {
             console.error('Failed to fetch scanned invoices:', error);
         }
@@ -28,20 +36,18 @@ export const useScannedInvoicesStore = defineStore('scannedInvoices', () => {
 
     const addScannedInvoice = async (invoice: Omit<ScannedInvoice, 'id' | 'createdAt'>) => {
         try {
-            const response = await fetch(`${API_URL}/scanned-logs`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    vendor_name: invoice.fileName.split('.')[0], // fallback if vendor not parsed
-                    date: invoice.extractedDate || invoice.date,
-                    total_amount: parseFloat(invoice.total) || 0,
-                    raw_text: invoice.rawText,
-                    status: 'Processed'
-                })
+            await addDoc(collection(db, 'scanned_logs'), {
+                fileName: invoice.fileName,
+                date: invoice.date,
+                extractedDate: invoice.extractedDate,
+                total: invoice.total,
+                rawText: invoice.rawText,
+                vendor_name: invoice.fileName.split('.')[0],
+                total_amount: parseFloat(invoice.total) || 0,
+                status: 'Processed',
+                createdAt: new Date().toISOString()
             });
-            if (response.ok) {
-                await fetchScannedInvoices();
-            }
+            await fetchScannedInvoices();
         } catch (error) {
             console.error('Failed to save scanned invoice:', error);
         }

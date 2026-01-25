@@ -15,36 +15,31 @@ export interface Account {
     status: 'Active' | 'Overdue' | 'Inactive';
 }
 
+import { db } from '../firebaseConfig';
+import { collection, addDoc, getDocs, query, orderBy } from 'firebase/firestore';
+
 export const useAccountsStore = defineStore('accounts', () => {
     const accounts = ref<Account[]>([]);
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
     const fetchAccounts = async () => {
         try {
-            const response = await fetch(`${API_URL}/accounts`);
-            if (response.ok) {
-                accounts.value = await response.json();
-            }
+            const q = query(collection(db, 'accounts'), orderBy('name'));
+            const querySnapshot = await getDocs(q);
+            accounts.value = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account));
         } catch (error) {
             console.error('Failed to fetch accounts:', error);
-            // Optional: fallback to dummy data if needed
-            accounts.value = [
-                { id: 1, name: 'Green Logistics', contact: 'Mark Smith', email: 'mark@greenlog.com', phone: '555-0101', address: '123 Logistics Way', balance: 2450.50, creditLimit: 5000, status: 'Active' },
-                { id: 2, name: 'City Construction', contact: 'Sarah Jones', email: 'sarah@cityconst.com', phone: '555-0102', address: '456 Builder Blvd', balance: 5120.00, creditLimit: 10000, status: 'Active' },
-            ];
         }
     };
 
     const addAccount = async (account: Omit<Account, 'id' | 'status'>) => {
         try {
-            const response = await fetch(`${API_URL}/accounts`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...account, status: 'Active' })
+            await addDoc(collection(db, 'accounts'), {
+                ...account,
+                status: 'Active',
+                balance: Number(account.balance) || 0,
+                creditLimit: Number(account.creditLimit) || 0
             });
-            if (response.ok) {
-                await fetchAccounts();
-            }
+            await fetchAccounts();
         } catch (error) {
             console.error('Failed to add account:', error);
         }

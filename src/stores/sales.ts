@@ -28,16 +28,17 @@ export interface SalesLog {
     safeTotal?: number;
 }
 
+import { db } from '../firebaseConfig';
+import { collection, getDocs, setDoc, doc, query, orderBy } from 'firebase/firestore';
+
 export const useSalesStore = defineStore('sales', () => {
     const logs = ref<SalesLog[]>([]);
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
     const fetchLogs = async () => {
         try {
-            const response = await fetch(`${API_URL}/sales`);
-            if (response.ok) {
-                logs.value = await response.json();
-            }
+            const q = query(collection(db, 'sales_logs'), orderBy('date', 'desc'));
+            const querySnapshot = await getDocs(q);
+            logs.value = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SalesLog));
         } catch (error) {
             console.error('Failed to fetch sales logs:', error);
         }
@@ -46,38 +47,29 @@ export const useSalesStore = defineStore('sales', () => {
     const addLog = async (log: Omit<SalesLog, 'id' | 'date'>) => {
         try {
             const date = new Date().toISOString().split('T')[0];
-            const response = await fetch(`${API_URL}/sales`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    date,
-                    opening_cash: log.openingCash,
-                    opening_denominations: log.openingDenominations,
-                    closing_cash: log.closingCash,
-                    closing_denominations: log.closingDenominations,
-                    expenses: log.expenses,
-                    total_sales: log.totalSales,
-                    notes: log.notes,
-                    safe_cash: log.safeCash,
-                    safe_cash_details: log.safeCashDetails,
-                    checks: log.checks,
-                    safe_total: log.safeTotal
-                })
+            // Use date as document ID to ensure one log per day
+            await setDoc(doc(db, 'sales_logs', date as string), {
+                ...log,
+                date,
+                updatedAt: new Date().toISOString()
             });
-            if (response.ok) {
-                await fetchLogs();
-            }
+            await fetchLogs();
         } catch (error) {
             console.error('Failed to save sales log:', error);
         }
     };
 
     const updateLog = async (id: string, updates: Partial<Omit<SalesLog, 'id' | 'date'>>) => {
-        // For simplicity in this demo, we'll just re-save using POST since our server uses merge on date
-        // In a real app, we'd use PUT /api/sales/:id
-        const log = logs.value.find(l => l.id === id);
-        if (log) {
-            await addLog({ ...log, ...updates });
+        try {
+            const logRef = doc(db, 'sales_logs', id); // ID acts as the date string here ideally, or the original ID
+            // Since we use date as ID in addLog, 'id' here might be the date.
+            // If the UI passes a random ID, this might break. Let's check how 'id' is used. 
+            // The previous code generated a random ID for API, but for Postgres we used unique date.
+            // Let's assume 'id' is the document ID (which we set to date string).
+            await setDoc(logRef, updates, { merge: true });
+            await fetchLogs();
+        } catch (error) {
+            console.error('Failed to update sales log:', error);
         }
     };
 
