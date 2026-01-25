@@ -12,6 +12,14 @@ export interface InvoiceItem {
     total: number;
 }
 
+export interface Attachment {
+    id: string;
+    name: string;
+    size: number;
+    type: string;
+    dataUrl: string;
+}
+
 export interface Invoice {
     id: string;
     accountId: number | string;
@@ -23,6 +31,10 @@ export interface Invoice {
     tax: number;
     total: number;
     status: 'Draft' | 'Sent' | 'Paid';
+    attachments?: Attachment[];
+    emailSent?: boolean;
+    sentDate?: string;
+    recipientEmail?: string;
 }
 
 export const useInvoicesStore = defineStore('invoices', () => {
@@ -105,5 +117,72 @@ export const useInvoicesStore = defineStore('invoices', () => {
         doc.save(`${invoice.id}_${invoice.accountName.split(' ')[0]}.pdf`);
     };
 
-    return { invoices, addInvoice, generateInvoicePDF };
+    const attachFileToInvoice = (invoiceId: string, file: File): Promise<void> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const invoice = invoices.value.find(inv => inv.id === invoiceId);
+                if (invoice) {
+                    if (!invoice.attachments) {
+                        invoice.attachments = [];
+                    }
+                    const attachment: Attachment = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        name: file.name,
+                        size: file.size,
+                        type: file.type,
+                        dataUrl: e.target?.result as string
+                    };
+                    invoice.attachments.push(attachment);
+                    resolve();
+                } else {
+                    reject(new Error('Invoice not found'));
+                }
+            };
+            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const removeAttachment = (invoiceId: string, attachmentId: string) => {
+        const invoice = invoices.value.find(inv => inv.id === invoiceId);
+        if (invoice && invoice.attachments) {
+            invoice.attachments = invoice.attachments.filter(a => a.id !== attachmentId);
+        }
+    };
+
+    const sendInvoiceEmail = async (invoiceId: string, recipientEmail: string): Promise<boolean> => {
+        const invoice = invoices.value.find(inv => inv.id === invoiceId);
+        if (!invoice) return false;
+
+        // Simulate email sending (in production, use EmailJS, SendGrid, or Firebase Cloud Functions)
+        console.log('📧 Sending email...');
+        console.log('To:', recipientEmail);
+        console.log('Subject:', `Invoice ${invoice.id}`);
+        console.log('Invoice Details:', {
+            id: invoice.id,
+            accountName: invoice.accountName,
+            total: `$${invoice.total.toFixed(2)}`,
+            dueDate: invoice.dueDate,
+            attachments: invoice.attachments?.length || 0
+        });
+
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // Update invoice status
+        invoice.emailSent = true;
+        invoice.sentDate = new Date().toISOString();
+        invoice.recipientEmail = recipientEmail;
+        invoice.status = 'Sent';
+
+        console.log('✅ Email sent successfully!');
+        return true;
+    };
+
+    const removeInvoice = (id: string) => {
+        invoices.value = invoices.value.filter(inv => inv.id !== id);
+    };
+
+    return { invoices, addInvoice, generateInvoicePDF, attachFileToInvoice, removeAttachment, sendInvoiceEmail, removeInvoice };
 });

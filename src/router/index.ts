@@ -12,6 +12,7 @@ const AccountsView = () => import('../views/accounts/AccountsView.vue')
 const CreateAccountView = () => import('../views/accounts/CreateAccountView.vue')
 const ScanInvoiceView = () => import('../views/operations/ScanInvoiceView.vue')
 const CreateInvoiceView = () => import('../views/invoices/CreateInvoiceView.vue')
+const InvoicesListView = () => import('../views/invoices/InvoicesListView.vue')
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -35,6 +36,7 @@ const router = createRouter({
                 { path: 'accounts', name: 'accounts', component: AccountsView },
                 { path: 'accounts/new', name: 'create-account', component: CreateAccountView },
                 { path: 'scan', name: 'scan', component: ScanInvoiceView },
+                { path: 'invoices', name: 'invoices', component: InvoicesListView },
                 { path: 'invoices/new', name: 'create-invoice', component: CreateInvoiceView }
             ]
         }

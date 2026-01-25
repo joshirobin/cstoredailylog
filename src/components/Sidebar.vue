@@ -6,6 +6,7 @@ import {
   Users, 
   ScanLine, 
   Receipt,
+  FileText,
   LogOut,
   ChevronRight
 } from 'lucide-vue-next';
@@ -18,6 +19,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Daily Sales', href: '/sales', icon: Banknote },
   { name: 'Accounts', href: '/accounts', icon: Users },
+  { name: 'Invoices', href: '/invoices', icon: FileText },
   { name: 'Scan Invoice', href: '/scan', icon: ScanLine },
 ];
 
