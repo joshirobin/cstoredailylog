@@ -2,16 +2,17 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useSalesStore, type DenominationCounts, type Check } from '../../stores/sales';
 import { 
-  Save, AlertCircle, CheckCircle2, History as HistoryIcon, 
+  Save, AlertCircle, History as HistoryIcon, 
   Plus, Trash2, Vault, DollarSign, Calendar, 
   Edit3, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
   TrendingUp, Wallet, Receipt,
   Sparkles, Clock, Calculator, Loader2,
-  Paperclip, ExternalLink, FileText
+  Paperclip, FileText
 } from 'lucide-vue-next';
 import CashDenominations from '../../components/CashDenominations.vue';
 import { storage } from '../../firebaseConfig';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useNotificationStore } from '../../stores/notifications';
 
 const salesStore = useSalesStore();
 
@@ -34,7 +35,7 @@ const expenses = ref<number>(0);
 const notes = ref('');
 const isSubmitting = ref(false);
 const isUploading = ref(false);
-const statusMessage = ref<{ type: 'success' | 'error', text: string } | null>(null);
+const notificationStore = useNotificationStore();
 
 // Reports / Attachments
 const lottoUrl = ref('');
@@ -73,10 +74,8 @@ const checkExistingLog = () => {
        if (prevLog && prevLog.closingCash !== undefined) {
            openingCash.value = prevLog.closingCash;
            openingDetails.value = JSON.parse(JSON.stringify(prevLog.closingDenominations || { bills: [], coins: [] }));
-           // Small notification to user
-           statusMessage.value = { type: 'success', text: `Carried over $${prevLog.closingCash.toFixed(2)} from ${prevLog.date}` };
-           setTimeout(() => statusMessage.value = null, 3000);
-       }
+            notificationStore.info(`Carried over $${prevLog.closingCash.toFixed(2)} from ${prevLog.date}`, "Data Sync");
+        }
 
        if (editingLogId.value && salesStore.logs.find(l => l.id === editingLogId.value)?.date !== selectedDate.value) {
            editingLogId.value = null;
@@ -202,8 +201,7 @@ const deleteLog = () => {
   if (deleteConfirmLogId.value) {
     salesStore.deleteLog(deleteConfirmLogId.value);
     deleteConfirmLogId.value = null;
-    statusMessage.value = { type: 'success', text: 'Log deleted successfully!' };
-    setTimeout(() => { statusMessage.value = null; }, 3000);
+    notificationStore.success('Log deleted successfully!', 'Archived');
   }
 };
 
@@ -243,12 +241,11 @@ const totalSalesThisMonth = computed(() => {
 
 const saveDailyLog = async () => {
   if (openingCash.value === 0 && closingCash.value === 0) {
-    statusMessage.value = { type: 'error', text: 'Please enter details for Opening and Closing cash.' };
+    notificationStore.error('Please enter details for Opening and Closing cash.', 'Validation Error');
     return;
   }
 
   isSubmitting.value = true;
-  statusMessage.value = null;
 
   try {
     let finalLottoUrl = lottoUrl.value;
@@ -290,19 +287,18 @@ const saveDailyLog = async () => {
 
     if (editingLogId.value) {
       await salesStore.updateLog(editingLogId.value, logData);
-      statusMessage.value = { type: 'success', text: 'Daily sales log updated successfully!' };
+      notificationStore.success('Daily sales log updated successfully!', 'Saved');
       editingLogId.value = null;
     } else {
       await salesStore.addLog(logData);
-      statusMessage.value = { type: 'success', text: 'Daily sales log saved successfully!' };
+      notificationStore.success('Daily sales log saved successfully!', 'Success');
     }
     
     resetForm();
-    setTimeout(() => { statusMessage.value = null; }, 3000);
     
   } catch (error) {
     console.error("Error saving sales log: ", error);
-    statusMessage.value = { type: 'error', text: 'Failed to save log. Please try again.' };
+    notificationStore.error('Failed to save log. Please try again.', 'System Error');
   } finally {
     isSubmitting.value = false;
     isUploading.value = false;
@@ -553,14 +549,7 @@ const saveDailyLog = async () => {
                 </button>
               </div>
 
-              <div v-if="statusMessage" 
-                class="flex items-center gap-3 p-4 rounded-2xl animate-in fade-in zoom-in duration-300"
-                :class="statusMessage.type === 'success' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'"
-              >
-                <CheckCircle2 v-if="statusMessage.type === 'success'" class="w-5 h-5" />
-                <AlertCircle v-else class="w-5 h-5" />
-                <span class="font-bold text-sm">{{ statusMessage.text }}</span>
-              </div>
+              <div class="h-4"></div>
             </div>
           </div>
         </div>

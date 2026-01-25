@@ -238,7 +238,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
             const pdfDoc = generateInvoicePDF(invoice);
             const pdfBase64 = pdfDoc.output('datauristring');
 
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}/api/send-email`, {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001'}/api/send-email`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -276,8 +276,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
             return true;
         } catch (error: any) {
             console.error('Failed to send invoice email:', error);
-            alert(`Error: ${error.message}`);
-            return false;
+            throw error;
         }
     };
 

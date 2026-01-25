@@ -8,8 +8,10 @@ import {
   Trash2, Eye, Calendar, User, 
   CheckCircle2, Clock, AlertCircle
 } from 'lucide-vue-next';
+import { useNotificationStore } from '../../stores/notifications';
 
 const invoicesStore = useInvoicesStore();
+const notificationStore = useNotificationStore();
 const searchQuery = ref('');
 const statusFilter = ref('All');
 
@@ -51,12 +53,16 @@ const handleDownloadPDF = (invoice: Invoice) => {
 
 const handleSendEmail = async (invoice: Invoice) => {
   if (!invoice.recipientEmail) {
-    alert('No recipient email found for this invoice.');
+    notificationStore.error('No recipient email found for this invoice.');
     return;
   }
-  const success = await invoicesStore.sendInvoiceEmail(invoice.id, invoice.recipientEmail);
-  if (success) {
-    alert('Email sent successfully!');
+  try {
+    const success = await invoicesStore.sendInvoiceEmail(invoice.id, invoice.recipientEmail);
+    if (success) {
+      notificationStore.success('Email sent successfully!', 'Invoice Sent');
+    }
+  } catch (error: any) {
+    notificationStore.error(error.message || 'Failed to send email.', 'Email Error');
   }
 };
 

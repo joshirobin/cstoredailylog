@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { RouterView } from 'vue-router';
 import Sidebar from '../components/Sidebar.vue';
+import NotificationCenter from '../components/NotificationCenter.vue';
 import { Bell, Search, X, Check } from 'lucide-vue-next';
 import { useAuthStore } from '../stores/auth';
 
@@ -67,6 +68,7 @@ onMounted(() => {
   <div class="flex min-h-screen bg-surface-950 text-white">
     <!-- Sidebar -->
     <Sidebar />
+    <NotificationCenter />
 
     <!-- Main Content Area -->
     <div class="flex-1 flex flex-col min-w-0">

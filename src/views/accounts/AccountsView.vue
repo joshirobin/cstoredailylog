@@ -5,10 +5,12 @@ import { useAccountsStore, type Account } from '../../stores/accounts';
 
 import { useInvoicesStore } from '../../stores/invoices';
 import { usePaymentsStore } from '../../stores/payments';
+import { useNotificationStore } from '../../stores/notifications';
 
 const accountsStore = useAccountsStore();
 const invoicesStore = useInvoicesStore();
 const paymentsStore = usePaymentsStore();
+const notificationStore = useNotificationStore();
 
 const handleGeneratePDF = async (account: Account) => {
   // Fetch data
@@ -46,13 +48,17 @@ const handleEmail = async (account: Account) => {
   const transactions = [...invoiceTxns, ...paymentTxns].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   if (!account.email) {
-    alert('No email address found for this account.');
+    notificationStore.error('No email address found for this account.');
     return;
   }
 
-  const success = await accountsStore.sendStatementEmail(account, transactions);
-  if (success) {
-    alert(`Statement sent successfully to ${account.email}`);
+  try {
+    const success = await accountsStore.sendStatementEmail(account, transactions);
+    if (success) {
+      notificationStore.success(`Statement sent successfully to ${account.email}`, 'Success');
+    }
+  } catch (error: any) {
+    notificationStore.error(error.message || 'Failed to send statement email.', 'Email Error');
   }
 };
 </script>

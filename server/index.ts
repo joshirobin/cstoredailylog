@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import knex from 'knex';
-import knexConfig from './knexfile.js';
+import knexConfig from './knexfile';
 import nodemailer from 'nodemailer';
 
 dotenv.config();
@@ -156,7 +156,7 @@ app.post('/api/send-email', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.SERVER_PORT || 3001;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
