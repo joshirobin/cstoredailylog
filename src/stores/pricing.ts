@@ -140,12 +140,82 @@ export const usePricingStore = defineStore('pricing', () => {
         }
     };
 
+    // --- AI Strategist Logic (Feature 4) ---
+    const getPriceRecommendations = () => {
+        const fuelStore = useFuelStore();
+        return fuelStore.currentPrices.map(p => {
+            const market = competitorPrices.value
+                .filter(c => c.prices.some(fp => fp.fuelType === p.type));
+
+            if (market.length === 0) return null;
+
+            const avgMarketPrice = market.reduce((acc, curr) => {
+                const fp = curr.prices.find(f => f.fuelType === p.type);
+                return acc + (fp?.price || 0);
+            }, 0) / market.length;
+
+            const diff = p.cashPrice - avgMarketPrice;
+
+            let action: 'HOLD' | 'DECREASE' | 'INCREASE' = 'HOLD';
+            let reason = 'Market stable. Maintaining position.';
+            let recommendedPrice = p.cashPrice;
+
+            if (diff > 0.05) {
+                action = 'DECREASE';
+                recommendedPrice = Number((avgMarketPrice + 0.01).toFixed(3));
+                reason = `You are ${(diff * 100).toFixed(1)}¢ above local average. Decrease to capture volume.`;
+            } else if (diff < -0.05) {
+                action = 'INCREASE';
+                recommendedPrice = Number((avgMarketPrice - 0.01).toFixed(3));
+                reason = `You are ${(Math.abs(diff) * 100).toFixed(1)}¢ below market. Room to recover margin.`;
+            }
+
+            return {
+                type: p.type,
+                current: p.cashPrice,
+                recommended: recommendedPrice,
+                action,
+                reason,
+                marketAvg: avgMarketPrice
+            };
+        }).filter(Boolean);
+    };
+
+    const getAggressorAlerts = () => {
+        // Find competitors who dropped prices significantly in the last 'scan'
+        // Since we refresh, we'll look for those >5% below market avg
+        const marketAvg = (type: string) => {
+            const prices = competitorPrices.value
+                .map(c => c.prices.find(f => f.fuelType === type)?.price)
+                .filter(Boolean) as number[];
+            return prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
+        };
+
+        return competitorPrices.value.map(c => {
+            const alerts = c.prices.map(p => {
+                const avg = marketAvg(p.fuelType);
+                if (avg && p.price < avg - 0.10) {
+                    return {
+                        type: p.fuelType,
+                        price: p.price,
+                        diff: p.price - avg,
+                        station: c.stationName
+                    };
+                }
+                return null;
+            }).filter(Boolean);
+            return alerts.length > 0 ? { station: c.stationName, alerts } : null;
+        }).filter(Boolean);
+    };
+
     return {
         competitorPrices,
         loading,
         fetchCompetitorPrices,
         logCompetitorPrice,
         scanPerimeter,
-        MAJOR_BRANDS
+        MAJOR_BRANDS,
+        getPriceRecommendations,
+        getAggressorAlerts
     };
 });

@@ -64,7 +64,6 @@ export interface CompetitorPrice {
     prices: { type: string; price: number }[];
     updatedAt: string;
 }
-
 export interface CurrentFuelPrice {
     type: string;
     cashPrice: number;
@@ -74,6 +73,13 @@ export interface CurrentFuelPrice {
     updatedAt: string;
 }
 
+export interface TankConfig {
+    type: string;
+    capacity: number;
+    reorderPoint: number;
+    shutoffPoint: number;
+}
+
 export const useFuelStore = defineStore('fuel', () => {
     const logs = ref<FuelLog[]>([]);
     const orders = ref<FuelOrder[]>([]);
@@ -81,6 +87,13 @@ export const useFuelStore = defineStore('fuel', () => {
     const competitorPrices = ref<CompetitorPrice[]>([]);
     const currentPrices = ref<CurrentFuelPrice[]>([]);
     const loading = ref(false);
+
+    const tankConfigs = ref<TankConfig[]>([
+        { type: 'Regular', capacity: 10000, reorderPoint: 3000, shutoffPoint: 300 },
+        { type: 'Plus', capacity: 8000, reorderPoint: 2000, shutoffPoint: 300 },
+        { type: 'Premium', capacity: 8000, reorderPoint: 2000, shutoffPoint: 300 },
+        { type: 'Diesel', capacity: 12000, reorderPoint: 4000, shutoffPoint: 300 }
+    ]);
 
     const defaultFuelTypes = ['Regular', 'Plus', 'Premium', 'Diesel', 'Kerosene'];
 
@@ -286,11 +299,60 @@ export const useFuelStore = defineStore('fuel', () => {
         }
     };
 
+    // --- Logistics Intelligence (Feature 2) ---
+    const getLogisticsStatus = (type: string) => {
+        const config = tankConfigs.value.find(c => c.type === type);
+        const latestLog = logs.value[0];
+        const entry = latestLog?.entries.find(e => e.type === type);
+
+        if (!config || !entry) return null;
+
+        const currentGallons = entry.endInvAtg;
+        const ullage = (config.capacity * 0.90) - currentGallons; // 90% safe fill rule
+
+        // Simple prediction: average of last 3 logs sold gallons
+        const history = logs.value.slice(0, 3).map(l => l.entries.find(e => e.type === type)?.soldGal || 0);
+        const avgDailySales = history.length > 0 ? history.reduce((a, b) => a + b, 0) / history.length : 1500;
+
+        const daysToShutoff = (currentGallons - config.shutoffPoint) / (avgDailySales || 1);
+        const hoursToShutoff = Math.max(0, daysToShutoff * 24);
+
+        return {
+            currentGallons,
+            ullage: Math.max(0, Math.floor(ullage)),
+            hoursToShutoff: Number(hoursToShutoff.toFixed(1)),
+            isCritical: currentGallons <= config.reorderPoint,
+            isShutoffRisk: hoursToShutoff < 24
+        };
+    };
+
+    // --- Analytics Intelligence (Feature 3) ---
+    const getVarianceTrends = () => {
+        return logs.value.slice(0, 30).map(l => ({
+            date: l.date,
+            variance: l.totalVariance
+        })).reverse();
+    };
+
+    const getMarginVelocity = () => {
+        return currentPrices.value.map(p => {
+            const latestLog = logs.value[0];
+            const sold = (latestLog?.entries.find(e => e.type === p.type)?.soldGal) || (p.type.includes('Regular') ? 2500 : 800);
+            return {
+                type: p.type,
+                margin: p.margin,
+                volume: sold,
+                velocity: p.margin * sold // Dollars earned from this fuel type
+            };
+        });
+    };
+
     return {
         logs, loading, defaultFuelTypes, fetchLogs, stopSync, addLog,
         orders, fetchOrders, addOrder,
         invoices, fetchInvoices, addInvoice,
         competitorPrices, fetchCompetitorPrices, updateCompetitorPrice, deleteCompetitor,
-        currentPrices, fetchCurrentPrices, updateCurrentPrice
+        currentPrices, fetchCurrentPrices, updateCurrentPrice,
+        tankConfigs, getLogisticsStatus, getVarianceTrends, getMarginVelocity
     };
 });
