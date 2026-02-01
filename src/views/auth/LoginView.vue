@@ -17,6 +17,14 @@ const handleLogin = async () => {
   
   try {
     await authStore.login(email.value, password.value);
+    
+    // Check verification status after login
+    if (authStore.user && !authStore.user.emailVerified && !authStore.isDemo) {
+        // Do not redirect, just let the reactive template show the warning
+        isSubmitting.value = false;
+        return;
+    }
+    
     router.push('/');
   } catch (err: any) {
     if (err.code === 'auth/invalid-credential') {
