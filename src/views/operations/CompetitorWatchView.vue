@@ -32,11 +32,14 @@ const newLog = ref({
 });
 
 const filteredCompetitors = computed(() => {
+    const query = zipFilter.value.toLowerCase().trim();
     return pricingStore.competitorPrices.filter(c => {
         const matchesBrand = selectedBrand.value === 'All Brands' || (c.brand === selectedBrand.value);
         const matchesRadius = (c.distance || 0) <= scanRadius.value;
-        const matchesZip = !zipFilter.value || c.zipCode?.includes(zipFilter.value);
-        return matchesBrand && matchesRadius && matchesZip;
+        const targetZip = String(c.zipCode || '').toLowerCase();
+        const targetName = String(c.stationName || '').toLowerCase();
+        const matchesSearch = !query || targetZip.includes(query) || targetName.includes(query);
+        return matchesBrand && matchesRadius && matchesSearch;
     });
 });
 
@@ -191,12 +194,12 @@ watch(() => locationsStore.activeLocationId, () => {
                     </select>
                 </div>
 
-                <!-- Zip Filter -->
+                <!-- Zip/Search Filter -->
                 <div class="space-y-4">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Locality Search (Zip)</label>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Locality / Station Search</label>
                     <div class="relative">
                         <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input v-model="zipFilter" placeholder="Enter zip code..." class="w-full bg-slate-50 border-none rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:ring-2 ring-primary-500 transition-all outline-none" />
+                        <input v-model="zipFilter" placeholder="Search zip or station name..." class="w-full bg-slate-50 border-none rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:ring-2 ring-primary-500 transition-all outline-none" />
                     </div>
                 </div>
 
@@ -282,9 +285,16 @@ watch(() => locationsStore.activeLocationId, () => {
                                 </div>
                                 <div>
                                     <p class="text-xl font-black text-slate-900 uppercase italic tracking-tighter leading-none mb-1 group-hover:text-primary-600 transition-colors">{{ c.stationName }}</p>
-                                    <div class="flex items-center gap-2">
-                                        <MapPin class="w-3 h-3 text-primary-500" />
-                                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ c.distanceStr }} • {{ c.brand }}</p>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <div class="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-100">
+                                            <MapPin class="w-3 h-3 text-primary-500" />
+                                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ c.distanceStr }}</p>
+                                        </div>
+                                        <div v-if="c.zipCode" class="flex items-center gap-1.5 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
+                                            <Navigation class="w-2.5 h-2.5 text-indigo-500" />
+                                            <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{{ c.zipCode }}</p>
+                                        </div>
+                                        <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest">• {{ c.brand }}</p>
                                     </div>
                                 </div>
                             </div>
