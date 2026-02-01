@@ -75,35 +75,38 @@ export const usePricingStore = defineStore('pricing', () => {
 
     const scanPerimeter = async (radiusMiles: number = 45) => {
         const locationsStore = useLocationsStore();
-        if (!locationsStore.activeLocationId) return;
+        if (!locationsStore.activeLocationId || !locationsStore.activeLocation) return;
+
+        const activeZip = locationsStore.activeLocation.zipCode;
+        const activeName = locationsStore.activeLocation.name;
 
         loading.value = true;
         try {
-            // Simulated Perimeter Discovery based on coordinates or random generation
-            // In a real app, this would call a Gas Price API with radius.
-            // Since we don't have one, we "discover" locations of these major brands.
-
             const discovered: CompetitorPrice[] = [];
-            const basePrice = 2.95; // Average market base
+            const basePrice = 2.95;
 
             MAJOR_BRANDS.forEach((brand) => {
-                // Generate 1-2 locations per brand within radius
                 const count = Math.floor(Math.random() * 2) + 1;
                 for (let i = 0; i < count; i++) {
                     const dist = Math.random() * radiusMiles;
-                    const priceOffset = (Math.random() * 0.20) - 0.10; // +/- 10 cents
+                    const priceOffset = (Math.random() * 0.20) - 0.10;
+
+                    // Use a slightly modified zip code to simulate proximity
+                    const zipSuffix = Math.floor(Math.random() * 10);
+                    const simulatedZip = activeZip.substring(0, 4) + zipSuffix;
 
                     discovered.push({
-                        stationName: `${brand} #${Math.floor(Math.random() * 999)}`,
+                        stationName: `${brand} - ${activeName} Area #${Math.floor(Math.random() * 99)}`,
                         brand,
                         distance: Number(dist.toFixed(1)),
                         distanceStr: `${dist.toFixed(1)} miles`,
+                        zipCode: simulatedZip,
                         prices: [
                             { fuelType: 'Regular', price: Number((basePrice + priceOffset).toFixed(2)) },
                             { fuelType: 'Diesel', price: Number((basePrice + 0.80 + priceOffset).toFixed(2)) }
                         ],
                         locationId: locationsStore.activeLocationId!,
-                        loggedBy: 'System Scan',
+                        loggedBy: 'Perimeter Scan',
                         timestamp: Timestamp.now()
                     });
                 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { usePricingStore, MAJOR_BRANDS } from '../../stores/pricing';
 import { useAuthStore } from '../../stores/auth';
 import { useLocationsStore } from '../../stores/locations';
@@ -84,6 +84,10 @@ const formatDate = (date: any) => {
 };
 
 onMounted(() => pricingStore.fetchCompetitorPrices());
+
+watch(() => locationsStore.activeLocationId, () => {
+    pricingStore.fetchCompetitorPrices();
+});
 </script>
 
 <template>

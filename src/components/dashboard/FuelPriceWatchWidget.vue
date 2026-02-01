@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onMounted, computed } from 'vue';
+import { onMounted, computed, watch } from 'vue';
 import { useFuelStore } from '../../stores/fuel';
 import { usePricingStore } from '../../stores/pricing';
+import { useLocationsStore } from '../../stores/locations';
 import { 
   ArrowUp, 
   ArrowDown, 
@@ -12,12 +13,18 @@ import {
 
 const fuelStore = useFuelStore();
 const pricingStore = usePricingStore();
+const locationsStore = useLocationsStore();
 
 onMounted(async () => {
     await Promise.all([
         fuelStore.fetchCurrentPrices(),
         pricingStore.fetchCompetitorPrices()
     ]);
+});
+
+watch(() => locationsStore.activeLocationId, () => {
+    fuelStore.fetchCurrentPrices();
+    pricingStore.fetchCompetitorPrices();
 });
 
 const myRegularPrice = computed(() => {
