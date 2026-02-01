@@ -16,6 +16,8 @@ export interface TimeLog {
     lateMinutes?: number;
     isLate?: boolean;
     locationId: string;
+    shiftId?: string;
+    scheduledEndTime?: Timestamp;
 }
 
 export const useTimesheetsStore = defineStore('timesheets', () => {
@@ -23,7 +25,7 @@ export const useTimesheetsStore = defineStore('timesheets', () => {
     const activeLog = ref<TimeLog | null>(null);
     const loading = ref(false);
 
-    const fetchTimeLogs = async (employeeId?: string) => {
+    const fetchTimeLogs = async (employeeId?: string, skipCheck: boolean = false) => {
         const locationsStore = useLocationsStore();
         if (!locationsStore.activeLocationId) return;
 
@@ -48,6 +50,11 @@ export const useTimesheetsStore = defineStore('timesheets', () => {
             if (employeeId) {
                 activeLog.value = timeLogs.value.find(log => log.status === 'In Progress') || null;
             }
+
+            // Trigger Auto Clock-Out check only if not already in a check
+            if (!skipCheck) {
+                await checkAutoClockOut();
+            }
         } catch (error) {
             console.error('Failed to fetch time logs:', error);
         } finally {
@@ -55,7 +62,25 @@ export const useTimesheetsStore = defineStore('timesheets', () => {
         }
     };
 
-    const clockIn = async (employeeId: string, employeeName: string, lateness?: { isLate: boolean; lateMinutes: number }) => {
+    const checkAutoClockOut = async () => {
+        const now = new Date();
+        const logsToFix = timeLogs.value.filter(log =>
+            log.status === 'In Progress' &&
+            log.scheduledEndTime &&
+            now > log.scheduledEndTime.toDate()
+        );
+
+        if (logsToFix.length === 0) return;
+
+        console.log(`Auto Clock-Out: Found ${logsToFix.length} logs to repair.`);
+
+        for (const log of logsToFix) {
+            console.log(`Auto Clock-Out: Repairing log for ${log.employeeName}`);
+            await clockOut(log.id, log.employeeId, log.scheduledEndTime, true);
+        }
+    };
+
+    const clockIn = async (employeeId: string, employeeName: string, options?: { isLate?: boolean; lateMinutes?: number; shiftId?: string; scheduledEndTime?: Timestamp }) => {
         const locationsStore = useLocationsStore();
         if (!locationsStore.activeLocationId) return;
 
@@ -68,8 +93,10 @@ export const useTimesheetsStore = defineStore('timesheets', () => {
                 clockOut: null,
                 totalHours: null,
                 status: 'In Progress',
-                isLate: lateness?.isLate || false,
-                lateMinutes: lateness?.lateMinutes || 0
+                isLate: options?.isLate || false,
+                lateMinutes: options?.lateMinutes || 0,
+                shiftId: options?.shiftId || null,
+                scheduledEndTime: options?.scheduledEndTime || null
             };
             const docRef = await addDoc(collection(db, 'timesheets'), newLog);
             await fetchTimeLogs(employeeId);
@@ -80,26 +107,28 @@ export const useTimesheetsStore = defineStore('timesheets', () => {
         }
     };
 
-    const clockOut = async (logId: string, employeeId: string) => {
+    const clockOut = async (logId: string, employeeId: string, customEndTime?: Timestamp, skipFetchCheck: boolean = false) => {
         try {
             const logRef = doc(db, 'timesheets', logId);
-            const now = Timestamp.now();
+            const endTime = customEndTime || Timestamp.now();
 
-            // Re-fetch current log to calculate hours
+            // Find current log to calculate hours
             const logSnapshot = timeLogs.value.find(l => l.id === logId);
             if (!logSnapshot) throw new Error('Log not found');
 
             const clockInDate = logSnapshot.clockIn.toDate();
-            const clockOutDate = now.toDate();
-            const hours = (clockOutDate.getTime() - clockInDate.getTime()) / (1000 * 60 * 60);
+            const clockOutDate = endTime.toDate();
+            // Ensure end time is at least same as start time to avoid negative hours
+            const finalClockOutDate = clockOutDate < clockInDate ? clockInDate : clockOutDate;
+            const hours = (finalClockOutDate.getTime() - clockInDate.getTime()) / (1000 * 60 * 60);
 
             await updateDoc(logRef, {
-                clockOut: now,
+                clockOut: Timestamp.fromDate(finalClockOutDate),
                 totalHours: Number(hours.toFixed(2)),
                 status: 'Completed'
             });
 
-            await fetchTimeLogs(employeeId);
+            await fetchTimeLogs(employeeId, skipFetchCheck);
         } catch (error) {
             console.error('Failed to clock out:', error);
             throw error;

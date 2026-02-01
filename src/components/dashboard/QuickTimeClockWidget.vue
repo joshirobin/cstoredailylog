@@ -2,16 +2,21 @@
 import { ref, onMounted, computed } from 'vue';
 import { useEmployeesStore } from '../../stores/employees';
 import { useTimesheetsStore } from '../../stores/timesheets';
+import { useShiftStore } from '../../stores/shifts';
 import { 
   LogIn, LogOut, User, Timer, ArrowRight
 } from 'lucide-vue-next';
 
 const employeesStore = useEmployeesStore();
 const timesheetsStore = useTimesheetsStore();
+const shiftStore = useShiftStore();
 const selectedEmployeeId = ref('');
 
 onMounted(async () => {
-  await employeesStore.fetchEmployees();
+  await Promise.all([
+    employeesStore.fetchEmployees(),
+    shiftStore.fetchShifts()
+  ]);
 });
 
 const handleEmployeeChange = async () => {
@@ -43,8 +48,50 @@ const handleClockAction = async () => {
     await timesheetsStore.clockOut(timesheetsStore.activeLog.id, selectedEmployeeId.value);
      alert(`Goodbye, ${employee.firstName}! Shift ended.`);
   } else {
-    await timesheetsStore.clockIn(selectedEmployeeId.value, `${employee.firstName} ${employee.lastName}`);
-     alert(`Welcome, ${employee.firstName}!\n\nPlease check your daily tasks. Thank you.`);
+    // Clock-in Restriction Logic
+    let lateness = { isLate: false, lateMinutes: 0 };
+    let shiftId = '';
+    let scheduledEndTime: any = null;
+
+    const today = new Date();
+    const employeeShifts = shiftStore.shifts.filter(s => 
+        s.employeeId === selectedEmployeeId.value && 
+        s.startTime && typeof s.startTime.toDate === 'function' &&
+        s.startTime.toDate().toDateString() === today.toDateString()
+    );
+
+    if (employeeShifts.length > 0) {
+        const sortedShifts = employeeShifts.sort((a,b) => a.startTime.toDate().getTime() - b.startTime.toDate().getTime());
+        const currentShift = sortedShifts.find(s => today.getTime() < s.endTime.toDate().getTime()) || sortedShifts[0];
+        
+        if (currentShift) {
+            shiftId = currentShift.id;
+            scheduledEndTime = currentShift.endTime;
+            const startTime = currentShift.startTime.toDate().getTime();
+            
+            // 10 MINUTE EARLY RESTRICTION
+            if (today.getTime() < startTime - (10 * 60 * 1000)) {
+                const diff = Math.ceil((startTime - today.getTime()) / (60 * 1000));
+                alert(`Too Early! Scheduled start: ${formatTime(currentShift.startTime)}.\n\nPlease wait ${diff - 10} more mins.`);
+                enteredPin.value = '';
+                return;
+            }
+
+            if (today.getTime() > startTime) {
+                lateness = { isLate: true, lateMinutes: Math.floor((today.getTime() - startTime) / (60 * 1000)) };
+            }
+        }
+    }
+
+    await timesheetsStore.clockIn(selectedEmployeeId.value, `${employee.firstName} ${employee.lastName}`, {
+        ...lateness,
+        shiftId,
+        scheduledEndTime
+    });
+     
+    let msg = `Welcome, ${employee.firstName}!`;
+    if (lateness.isLate) msg += `\n(Marked late by ${lateness.lateMinutes} mins)`;
+    alert(msg);
   }
   
   enteredPin.value = '';
@@ -55,6 +102,7 @@ const formatTime = (timestamp: any) => {
   const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
+
 </script>
 
 <template>

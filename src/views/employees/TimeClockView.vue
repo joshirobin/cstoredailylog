@@ -61,8 +61,10 @@ const handleClockAction = async () => {
   } else {
     // Clocking In
     let lateness = { isLate: false, lateMinutes: 0 };
+    let shiftId = '';
+    let scheduledEndTime: any = null;
     
-    // Lateness detection
+    // Lateness detection & Early clock-in prevention
     const today = new Date();
     const employeeShifts = shiftStore.shifts.filter(s => 
         s.employeeId === selectedEmployeeId.value && 
@@ -70,24 +72,50 @@ const handleClockAction = async () => {
         s.startTime.toDate().toDateString() === today.toDateString()
     );
 
-
     if (employeeShifts.length > 0) {
-        // Sort to find the most relevant shift (the one they are supposed to be starting)
+        // Sort to find the most relevant shift (the one starting soonest or already started)
         const sortedShifts = employeeShifts.sort((a,b) => a.startTime.toDate().getTime() - b.startTime.toDate().getTime());
-        const currentShift = sortedShifts[0];
         
-        // If they clock in after scheduled start
-        if (currentShift && today.getTime() > currentShift.startTime.toDate().getTime()) {
-             lateness = { isLate: true, lateMinutes: 15 };
+        // Find a shift that hasn't ended yet or is starting soon
+        const currentShift = sortedShifts.find(s => today.getTime() < s.endTime.toDate().getTime()) || sortedShifts[0];
+        
+        if (currentShift) {
+            shiftId = currentShift.id;
+            scheduledEndTime = currentShift.endTime;
+
+            const startTime = currentShift.startTime.toDate().getTime();
+            const earlyThreshold = startTime - (10 * 60 * 1000); // 10 minutes before
+
+            // EARLY CLOCK-IN PREVENTION
+            if (today.getTime() < earlyThreshold) {
+                const diff = Math.ceil((startTime - today.getTime()) / (60 * 1000));
+                alert(`Too Early! You are scheduled to start at ${formatTime(currentShift.startTime)}.\n\nPlease wait another ${diff - 10} minutes before clocking in to prevent unauthorized overtime.`);
+                enteredPin.value = '';
+                return;
+            }
+
+            // If they clock in after scheduled start
+            if (today.getTime() > startTime) {
+                 const diff = Math.floor((today.getTime() - startTime) / (60 * 1000));
+                 lateness = { isLate: true, lateMinutes: diff };
+            }
         }
+    } else if (employee.role !== 'Admin' && employee.role !== 'Manager') {
+        // If no shifts scheduled today, maybe prevent clock-in for non-managers?
+        // For now, let's keep it open or just warn.
+        console.warn('No scheduled shift found for today.');
     }
 
-    await timesheetsStore.clockIn(selectedEmployeeId.value, `${employee.firstName} ${employee.lastName}`, lateness);
+    await timesheetsStore.clockIn(selectedEmployeeId.value, `${employee.firstName} ${employee.lastName}`, {
+        ...lateness,
+        shiftId,
+        scheduledEndTime
+    });
     
     // Welcome Popup
     let msg = `Welcome, ${employee.firstName}!\n\nPlease check your daily tasks. Thank you.`;
     if (lateness.isLate) {
-        msg = `⚠️ LATE CLOCK-IN DETECTED ⚠️\n\nWelcome, ${employee.firstName}. You are marked as late. 15 minutes have been added to your late record.`;
+        msg = `⚠️ LATE CLOCK-IN DETECTED ⚠️\n\nWelcome, ${employee.firstName}. You are marked as late by ${lateness.lateMinutes} minutes.`;
     }
     alert(msg);
   }

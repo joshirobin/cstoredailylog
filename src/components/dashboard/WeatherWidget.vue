@@ -80,17 +80,30 @@ const updateWeather = async () => {
 
 // Initial load
 onMounted(async () => {
+  // If we don't have locations yet, fetch them
   if (locationsStore.locations.length === 0) {
     await locationsStore.fetchLocations();
   }
-  // Ensure we wait for fetch to complete before triggering weather
   await updateWeather();
 });
 
-// React to location changes
-watch(() => locationsStore.activeLocationId, async () => {
-    await updateWeather();
-});
+// React to location changes or coordinates being updated (repair)
+watch(
+  [
+    () => locationsStore.activeLocationId, 
+    () => locationsStore.activeLocation?.latitude,
+    () => locationsStore.activeLocation?.longitude
+  ], 
+  async ([newId, newLat, newLon], [oldId, oldLat, oldLon]) => {
+    // Only fetch if ID changed OR coordinates changed significantly
+    if (newId !== oldId || newLat !== oldLat || newLon !== oldLon) {
+        if (locationsStore.locations.length > 0) {
+            await updateWeather();
+        }
+    }
+}, { immediate: true });
+
+
 </script>
 
 <template>

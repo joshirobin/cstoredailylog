@@ -16,6 +16,7 @@ import {
   AlertCircle
 } from 'lucide-vue-next';
 import CashDenominations from '../../components/CashDenominations.vue';
+import { useShiftStore } from '../../stores/shifts';
 import { useAuthStore } from '../../stores/auth';
 import { useEmployeesStore } from '../../stores/employees';
 import { useSalesStore, type Check, type DenominationCounts, type SalesLog } from '../../stores/sales';
@@ -27,6 +28,7 @@ const employeesStore = useEmployeesStore();
 const salesStore = useSalesStore();
 const timesheetsStore = useTimesheetsStore();
 const notificationStore = useNotificationStore();
+const shiftStore = useShiftStore();
 
 const formatTime = (timestamp: any) => {
     if (!timestamp) return '-';
@@ -59,7 +61,46 @@ const handleQuickRegistry = async () => {
                 notificationStore.error('Employee profile not found for this account', 'Error');
                 return;
             }
-            await timesheetsStore.clockIn(emp.id, `${emp.firstName} ${emp.lastName}`);
+
+            // Schedule Sync & Restriction
+            let lateness = { isLate: false, lateMinutes: 0 };
+            let shiftId = '';
+            let scheduledEndTime: any = null;
+
+            const today = new Date();
+            const myShifts = shiftStore.shifts.filter(s => 
+                s.employeeId === emp.id && 
+                s.startTime && typeof s.startTime.toDate === 'function' &&
+                s.startTime.toDate().toDateString() === today.toDateString()
+            );
+
+            if (myShifts.length > 0) {
+                const sorted = myShifts.sort((a,b) => a.startTime.toDate().getTime() - b.startTime.toDate().getTime());
+                const currentShift = sorted.find(s => today.getTime() < s.endTime.toDate().getTime()) || sorted[0];
+
+                if (currentShift) {
+                    shiftId = currentShift.id;
+                    scheduledEndTime = currentShift.endTime;
+                    const startTime = currentShift.startTime.toDate().getTime();
+
+                    // 10 MINUTE EARLY RESTRICTION
+                    if (today.getTime() < startTime - (10 * 60 * 1000)) {
+                        const minsLeft = Math.ceil((startTime - today.getTime()) / (60 * 1000)) - 10;
+                        notificationStore.error(`Too early! Your shift starts at ${formatTime(currentShift.startTime)}. Please wait ${minsLeft} more mins.`, 'Overtime Prevention');
+                        return;
+                    }
+
+                    if (today.getTime() > startTime) {
+                        lateness = { isLate: true, lateMinutes: Math.floor((today.getTime() - startTime) / (60 * 1000)) };
+                    }
+                }
+            }
+
+            await timesheetsStore.clockIn(emp.id, `${emp.firstName} ${emp.lastName}`, {
+                ...lateness,
+                shiftId,
+                scheduledEndTime
+            });
             notificationStore.success('Shift started!', 'Time Clock');
         }
     } catch (e) {
@@ -112,7 +153,8 @@ onMounted(async () => {
     await Promise.all([
         employeesStore.fetchEmployees(),
         salesStore.fetchLogs(),
-        timesheetsStore.fetchTimeLogs()
+        timesheetsStore.fetchTimeLogs(),
+        shiftStore.fetchShifts()
     ]);
     
     const myEmp = employeesStore.employees.find(e => e.email === authStore.user?.email);

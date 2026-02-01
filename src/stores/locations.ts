@@ -57,14 +57,47 @@ export const useLocationsStore = defineStore('locations', () => {
                     state: 'TX',
                     zipCode: '75201',
                     status: 'Active' as const,
-                    createdAt: new Date().toISOString()
+                    createdAt: new Date().toISOString(),
+                    latitude: 32.7767,
+                    longitude: -96.7970
                 };
                 const docRef = await addDoc(collection(db, 'locations'), defaultLoc);
-                const newLoc = { id: docRef.id, ...defaultLoc };
+                const newLoc = { id: docRef.id, ...defaultLoc } as Location;
                 locations.value = [newLoc];
                 setActiveLocation(docRef.id);
             } else {
                 locations.value = fetched;
+
+                // Auto-repair: If any location is missing coordinates but has a zipCode, try to geocode it
+                for (const loc of fetched) {
+                    if (!loc.latitude || !loc.longitude || loc.latitude === 0) {
+                        console.log(`Location Store: Attempting to repair coordinates for ${loc.name}...`);
+                        const geo = await geocodeZipCode(loc.zipCode);
+                        if (geo) {
+                            try {
+                                const docRef = doc(db, 'locations', loc.id);
+                                await updateDoc(docRef, {
+                                    latitude: geo.latitude,
+                                    longitude: geo.longitude,
+                                    city: geo.city || loc.city,
+                                    state: geo.state || loc.state
+                                });
+                                // Update local state matching the ID
+                                const idx = locations.value.findIndex(l => l.id === loc.id);
+                                if (idx !== -1) {
+                                    locations.value[idx] = {
+                                        ...locations.value[idx],
+                                        latitude: geo.latitude,
+                                        longitude: geo.longitude
+                                    } as Location;
+                                }
+                            } catch (e) {
+                                console.error('Silent coordinate repair failed:', e);
+                            }
+                        }
+                    }
+                }
+
                 if (!activeLocationId.value || !fetched.find(l => l.id === activeLocationId.value)) {
                     const first = fetched[0];
                     if (first) setActiveLocation(first.id);
@@ -85,8 +118,21 @@ export const useLocationsStore = defineStore('locations', () => {
 
     const addLocation = async (location: Omit<Location, 'id' | 'createdAt'>) => {
         try {
+            let finalLocation = { ...location };
+
+            // Geocode before adding
+            if (location.zipCode) {
+                const geo = await geocodeZipCode(location.zipCode);
+                if (geo) {
+                    finalLocation.latitude = geo.latitude;
+                    finalLocation.longitude = geo.longitude;
+                    finalLocation.city = geo.city || location.city;
+                    finalLocation.state = geo.state || location.state;
+                }
+            }
+
             const docRef = await addDoc(collection(db, 'locations'), {
-                ...location,
+                ...finalLocation,
                 createdAt: new Date().toISOString()
             });
             await fetchLocations();
