@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { 
   Sun, 
   Cloud, 
@@ -32,17 +32,34 @@ const getIcon = (iconName: string) => {
   }
 };
 
+const updateWeather = async () => {
+  loading.value = true;
+  const loc = locationsStore.activeLocation;
+  
+  // Default to Dallas, TX coordinates only if absolutely no location data
+  const lat = Number(loc?.latitude) || 32.7767;
+  const lon = Number(loc?.longitude) || -96.7970;
+  
+  // Ensure we have valid numbers before fetching
+  if (isNaN(lat) || isNaN(lon) || (lat === 0 && lon === 0)) {
+     console.warn('Invalid coordinates for location, using defaults.');
+  }
+
+  weather.value = await fetchWeather(lat, lon);
+  loading.value = false;
+};
+
+// Initial load
 onMounted(async () => {
   if (!locationsStore.activeLocationId) {
     await locationsStore.fetchLocations();
   }
-  
-  const loc = locationsStore.activeLocation;
-  const lat = loc?.latitude || 32.7767;
-  const lon = loc?.longitude || -96.7970;
-  
-  weather.value = await fetchWeather(lat, lon);
-  loading.value = false;
+  await updateWeather();
+});
+
+// React to location changes
+watch(() => locationsStore.activeLocationId, async () => {
+    await updateWeather();
 });
 </script>
 
