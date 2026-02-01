@@ -3,6 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { usePricingStore, MAJOR_BRANDS } from '../../stores/pricing';
 import { useAuthStore } from '../../stores/auth';
 import { useLocationsStore } from '../../stores/locations';
+import { useFuelStore } from '../../stores/fuel';
 import { 
   Plus, MapPin, 
   X,
@@ -13,6 +14,7 @@ import {
 const pricingStore = usePricingStore();
 const authStore = useAuthStore();
 const locationsStore = useLocationsStore();
+const fuelStore = useFuelStore();
 
 const scanRadius = ref(45);
 const selectedBrand = ref('All Brands');
@@ -43,12 +45,14 @@ const filteredCompetitors = computed(() => {
     });
 });
 
-const ownPrices = [
-    { type: 'Regular', current: 3.49, suggested: 3.45, change: -0.04 },
-    { type: 'Plus', current: 3.79, suggested: 3.79, change: 0 },
-    { type: 'Premium', current: 3.99, suggested: 3.95, change: -0.04 },
-    { type: 'Diesel', current: 4.19, suggested: 4.25, change: +0.06 }
-];
+const ownPrices = computed(() => {
+    return fuelStore.currentPrices.map(p => ({
+        type: p.type,
+        current: p.cashPrice,
+        suggested: Number((p.cashPrice - (Math.random() * 0.05)).toFixed(2)),
+        change: Number(((Math.random() * 0.1) - 0.05).toFixed(2))
+    }));
+});
 
 const handleScan = async () => {
     await pricingStore.scanPerimeter(scanRadius.value);
@@ -86,10 +90,14 @@ const formatDate = (date: any) => {
     }).format(d);
 };
 
-onMounted(() => pricingStore.fetchCompetitorPrices());
+onMounted(() => {
+    pricingStore.fetchCompetitorPrices();
+    fuelStore.fetchCurrentPrices();
+});
 
 watch(() => locationsStore.activeLocationId, () => {
     pricingStore.fetchCompetitorPrices();
+    fuelStore.fetchCurrentPrices();
 });
 </script>
 
