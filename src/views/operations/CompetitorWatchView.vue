@@ -113,7 +113,7 @@ watch(() => locationsStore.activeLocationId, () => {
             <h1 class="text-5xl font-[1000] text-slate-900 uppercase italic tracking-tighter leading-none">
                 Fuel <span class="text-primary-600">Perimeter</span> Watch
             </h1>
-            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">Active Radius: {{ scanRadius }} Miles Around {{ locationsStore.activeLocation?.name || 'Store' }}</p>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">Active Radius: {{ scanRadius }} Miles Around {{ locationsStore.activeLocation?.name || 'Store' }} [{{ locationsStore.activeLocation?.zipCode }}]</p>
         </div>
 
         <div class="flex flex-wrap gap-3">

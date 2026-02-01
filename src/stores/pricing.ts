@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { db } from '../firebaseConfig';
 import { collection, getDocs, addDoc, query, orderBy, Timestamp, limit, where } from 'firebase/firestore';
 import { useLocationsStore } from './locations';
+import { useFuelStore } from './fuel';
 
 export interface CompetitorPrice {
     id?: string;
@@ -75,6 +76,7 @@ export const usePricingStore = defineStore('pricing', () => {
 
     const scanPerimeter = async (radiusMiles: number = 45) => {
         const locationsStore = useLocationsStore();
+        const fuelStore = useFuelStore();
         if (!locationsStore.activeLocationId || !locationsStore.activeLocation) return;
 
         const activeZip = locationsStore.activeLocation.zipCode || '00000';
@@ -82,7 +84,10 @@ export const usePricingStore = defineStore('pricing', () => {
         loading.value = true;
         try {
             const discovered: CompetitorPrice[] = [];
-            const basePrice = 3.35;
+
+            // Use store's actual Regular price as baseline, or fallback to 3.35
+            const storeRegular = fuelStore.currentPrices.find((p: any) => p.type === 'Regular')?.cashPrice || 3.35;
+            const basePrice = storeRegular;
 
             MAJOR_BRANDS.forEach((brand) => {
                 const count = Math.floor(Math.random() * 2) + 1;
