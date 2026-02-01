@@ -67,8 +67,8 @@ const handleEmail = async (account: Account) => {
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-2xl font-bold font-display text-white">House Charge Accounts</h2>
-        <p class="text-surface-400 text-sm">Manage business customers and generate statements.</p>
+        <h2 class="text-2xl font-bold font-display text-slate-900">House Charge Accounts</h2>
+        <p class="text-slate-500 text-sm">Manage business customers and generate statements.</p>
       </div>
       <RouterLink to="/accounts/new" class="btn-primary flex items-center gap-2 text-sm">
         <UserPlus class="w-4 h-4" />
@@ -80,7 +80,7 @@ const handleEmail = async (account: Account) => {
     <div class="glass-panel overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm">
-          <thead class="bg-surface-800/50 text-surface-400 uppercase tracking-wider text-xs font-semibold">
+          <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider text-xs font-semibold">
             <tr>
               <th class="px-6 py-4">Business Name</th>
               <th class="px-6 py-4">Contact</th>
@@ -89,21 +89,21 @@ const handleEmail = async (account: Account) => {
               <th class="px-6 py-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-surface-800">
-            <tr v-for="account in accountsStore.accounts" :key="account.id" class="hover:bg-surface-800/30 transition-colors">
+          <tbody class="divide-y divide-slate-100">
+            <tr v-for="account in accountsStore.accounts" :key="account.id" class="hover:bg-slate-50 transition-colors">
               <td class="px-6 py-4">
-                <div class="font-medium text-white">{{ account.name }}</div>
-                <div class="text-surface-500 text-xs">{{ account.email }}</div>
+                <div class="font-medium text-slate-900">{{ account.name }}</div>
+                <div class="text-slate-500 text-xs">{{ account.email }}</div>
               </td>
-              <td class="px-6 py-4 text-surface-300">{{ account.contact }}</td>
-              <td class="px-6 py-4 font-mono font-medium text-white">${{ account.balance.toFixed(2) }}</td>
+              <td class="px-6 py-4 text-slate-600">{{ account.contact }}</td>
+              <td class="px-6 py-4 font-mono font-medium text-slate-900">${{ account.balance.toFixed(2) }}</td>
               <td class="px-6 py-4">
                 <span 
                   class="px-2.5 py-1 rounded-full text-xs font-medium border"
                   :class="{
-                    'bg-emerald-500/10 text-emerald-400 border-emerald-500/20': account.status === 'Active',
-                    'bg-amber-500/10 text-amber-400 border-amber-500/20': account.status === 'Overdue',
-                    'bg-surface-700/50 text-surface-400 border-surface-600': account.status === 'Inactive'
+                    'bg-emerald-50 text-emerald-700 border-emerald-100': account.status === 'Active',
+                    'bg-amber-50 text-amber-700 border-amber-100': account.status === 'Overdue',
+                    'bg-slate-100 text-slate-600 border-slate-200': account.status === 'Inactive'
                   }"
                 >
                   {{ account.status }}
@@ -113,19 +113,19 @@ const handleEmail = async (account: Account) => {
                 <div class="flex items-center justify-end gap-2">
                    <button 
                     @click="handleGeneratePDF(account)"
-                    class="p-2 text-surface-400 hover:text-primary-400 hover:bg-primary-500/10 rounded-lg transition-colors" 
+                    class="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors" 
                     title="Generate Statement"
                   >
                     <FileText class="w-4 h-4" />
                   </button>
                   <button 
                     @click="handleEmail(account)"
-                    class="p-2 text-surface-400 hover:text-secondary-400 hover:bg-secondary-500/10 rounded-lg transition-colors" 
-                    title="Email Invoice"
+                    class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" 
+                    title="Email Statement"
                   >
                     <Mail class="w-4 h-4" />
                   </button>
-                  <button class="p-2 text-surface-500 hover:text-white rounded-lg transition-colors">
+                  <button class="p-2 text-slate-400 hover:text-slate-600 rounded-lg transition-colors">
                     <MoreHorizontal class="w-4 h-4" />
                   </button>
                 </div>

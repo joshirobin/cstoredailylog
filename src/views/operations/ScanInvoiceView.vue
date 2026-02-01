@@ -25,6 +25,7 @@ const isProcessing = ref(false);
 const file = ref<File | null>(null);
 const extractedData = ref<{ total: string | null, date: string | null, description: string, accountId: string } | null>(null);
 const rawText = ref('');
+const fileDataUrl = ref<string | null>(null);
 const progress = ref(0);
 const isSaving = ref(false);
 
@@ -61,6 +62,7 @@ const processFile = async (fileToProcess: File) => {
   isProcessing.value = true;
   extractedData.value = null;
   rawText.value = '';
+  fileDataUrl.value = null;
   progress.value = 0;
   
   let imageSource: File | string = fileToProcess;
@@ -81,8 +83,16 @@ const processFile = async (fileToProcess: File) => {
 
         if (context) {
             await page.render({ canvasContext: context, viewport: viewport } as any).promise;
-            imageSource = canvas.toDataURL('image/png');
+            const dUrl = canvas.toDataURL('image/png');
+            imageSource = dUrl;
+            fileDataUrl.value = dUrl;
         }
+    } else if (fileToProcess.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            fileDataUrl.value = e.target?.result as string;
+        };
+        reader.readAsDataURL(fileToProcess);
     }
 
     const result = await Tesseract.recognize(
@@ -181,15 +191,21 @@ const saveToLog = async () => {
 // ... existing cleanup ...
 const handleConvertToInvoice = () => {
     if (!extractedData.value) return;
-    router.push({ 
-        path: '/invoices/new', 
-        query: { 
-            scannedTotal: extractedData.value.total ? extractedData.value.total.replace('$', '') : '0', 
-            scannedDate: extractedData.value.date,
-            scannedDesc: extractedData.value.description,
-            scannedAccountId: extractedData.value.accountId
-        } 
+    
+    scannedInvoicesStore.setPendingScan({
+        total: extractedData.value.total ? extractedData.value.total.replace('$', '') : '0',
+        date: extractedData.value.date,
+        description: extractedData.value.description,
+        accountId: extractedData.value.accountId,
+        file: file.value ? {
+            name: file.value.name,
+            size: file.value.size,
+            type: file.value.type,
+            dataUrl: fileDataUrl.value
+        } : null
     });
+
+    router.push('/invoices/new');
 };
 
 // Cleanup when navigating away from the component
@@ -217,38 +233,38 @@ onBeforeUnmount(async () => {
 <template>
   <div class="max-w-4xl mx-auto space-y-6">
     <div>
-      <h2 class="text-2xl font-bold font-display text-white">AI Scan Log</h2>
-      <p class="text-surface-400 text-sm">Upload invoices or receipts. AI will automatically extract details.</p>
+      <h2 class="text-2xl font-bold font-display text-slate-900">AI Scan Log</h2>
+      <p class="text-slate-500 text-sm">Upload invoices or receipts. AI will automatically extract details.</p>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
       <!-- Upload Zone -->
       <div>
         <div 
-          class="relative border-2 border-dashed rounded-xl h-80 flex flex-col items-center justify-center transition-all bg-surface-900/50"
-          :class="isDragging ? 'border-primary-500 bg-primary-500/10' : 'border-surface-700 hover:border-primary-500/50'"
+          class="relative border-2 border-dashed rounded-xl h-80 flex flex-col items-center justify-center transition-all bg-white"
+          :class="isDragging ? 'border-primary-500 bg-primary-50' : 'border-slate-200 hover:border-primary-300'"
           @dragover.prevent="isDragging = true"
           @dragleave.prevent="isDragging = false"
           @drop.prevent="onDrop"
         >
           <div v-if="!file" class="text-center p-8 pointer-events-none">
-            <div class="bg-surface-800 p-4 rounded-full inline-block mb-4">
-               <UploadCloud class="w-8 h-8 text-surface-400" />
+            <div class="bg-slate-50 p-4 rounded-full inline-block mb-4">
+               <UploadCloud class="w-8 h-8 text-slate-400" />
             </div>
-            <p class="text-white font-medium mb-1">Drag and drop invoice</p>
-            <p class="text-surface-500 text-sm mb-4">or click to browse</p>
+            <p class="text-slate-900 font-medium mb-1">Drag and drop invoice</p>
+            <p class="text-slate-500 text-sm mb-4">or click to browse</p>
           </div>
           <div v-else class="text-center p-8">
              <div class="relative inline-block mb-4">
-               <FileText class="w-12 h-12 text-primary-400" />
-               <div v-if="isProcessing" class="absolute -bottom-2 -right-2 bg-surface-900 rounded-full p-1 border border-surface-700">
-                 <Loader2 class="w-4 h-4 text-primary-500 animate-spin" />
+               <FileText class="w-12 h-12 text-primary-600" />
+               <div v-if="isProcessing" class="absolute -bottom-2 -right-2 bg-white rounded-full p-1 border border-slate-200 shadow-sm">
+                 <Loader2 class="w-4 h-4 text-primary-600 animate-spin" />
                </div>
                <div v-else class="absolute -bottom-2 -right-2 bg-emerald-500 text-white rounded-full p-1">
                  <Check class="w-3 h-3" />
                </div>
              </div>
-             <p class="text-white font-medium truncate max-w-[200px]">{{ file.name }}</p>
+             <p class="text-slate-900 font-medium truncate max-w-[200px]">{{ file.name }}</p>
              <button 
                v-if="!isProcessing"
                @click="file = null" 
@@ -278,41 +294,41 @@ onBeforeUnmount(async () => {
       <!-- Results Preview -->
       <div class="glass-panel p-6 flex flex-col h-full">
         <div class="flex items-center justify-between mb-6">
-          <h3 class="text-lg font-bold text-white">Extracted Data</h3>
-          <span class="text-xs bg-primary-500/10 text-primary-400 px-2 py-1 rounded border border-primary-500/20">AI Confidence: 85%</span>
+          <h3 class="text-lg font-bold text-slate-900">Extracted Data</h3>
+          <span class="text-xs bg-primary-50 text-primary-700 px-2 py-1 rounded border border-primary-100">AI Confidence: 85%</span>
         </div>
 
         <div v-if="extractedData" class="space-y-4 flex-1">
            <div class="space-y-1.5">
-             <label class="text-xs font-medium text-surface-400 ml-1">Total Amount</label>
-             <input v-model="extractedData.total" class="input-field w-full text-lg font-bold text-emerald-400" />
+             <label class="text-xs font-medium text-slate-500 ml-1">Total Amount</label>
+             <input v-model="extractedData.total" class="input-field w-full text-lg font-bold text-emerald-600" />
            </div>
 
            <div class="space-y-1.5">
-             <label class="text-xs font-medium text-surface-400 ml-1">Invoice Date</label>
+             <label class="text-xs font-medium text-slate-500 ml-1">Invoice Date</label>
              <input v-model="extractedData.date" class="input-field w-full" />
            </div>
 
            <div class="space-y-1.5">
-             <label class="text-xs font-medium text-surface-400 ml-1">Description</label>
+             <label class="text-xs font-medium text-slate-500 ml-1">Description</label>
              <input v-model="extractedData.description" class="input-field w-full" />
            </div>
 
            <div class="space-y-1.5">
-             <label class="text-xs font-medium text-surface-400 ml-1">Matched Account</label>
+             <label class="text-xs font-medium text-slate-500 ml-1">Matched Account</label>
               <select v-model="extractedData.accountId" class="input-field w-full">
                  <option value="">Select Account...</option>
                  <option v-for="acc in accountsStore.accounts" :key="acc.id" :value="acc.id">
                      {{ acc.name }}
                  </option>
-             </select>
+              </select>
            </div>
            
            <div class="space-y-1.5">
-             <label class="text-xs font-medium text-surface-400 ml-1">Raw Text Output</label>
+             <label class="text-xs font-medium text-slate-500 ml-1">Raw Text Output</label>
              <textarea 
                v-model="rawText" 
-               class="input-field w-full h-20 text-xs font-mono text-surface-300" 
+               class="input-field w-full h-20 text-xs font-mono text-slate-600" 
                readonly
              ></textarea>
            </div>
@@ -335,7 +351,7 @@ onBeforeUnmount(async () => {
            </div>
         </div>
         
-        <div v-else class="flex-1 flex flex-col items-center justify-center text-center text-surface-500 opacity-60">
+        <div v-else class="flex-1 flex flex-col items-center justify-center text-center text-slate-400 opacity-60">
           <Sparkles class="w-12 h-12 mb-3" />
           <p>Waiting for invoice contents...</p>
         </div>
@@ -345,23 +361,23 @@ onBeforeUnmount(async () => {
     <!-- Scanned Invoices History -->
     <div v-if="scannedInvoicesStore?.scannedInvoices?.length > 0" class="glass-panel p-6">
       <div class="flex items-center gap-3 mb-5">
-        <Clock class="w-5 h-5 text-surface-400" />
-        <h3 class="text-lg font-bold text-white">Recent Scan History</h3>
+        <Clock class="w-5 h-5 text-slate-400" />
+        <h3 class="text-lg font-bold text-slate-900">Recent Scan History</h3>
       </div>
       
       <div class="space-y-3">
         <div 
           v-for="scan in scannedInvoicesStore.scannedInvoices" 
           :key="scan.id" 
-          class="flex items-center justify-between p-4 bg-surface-900/40 border border-surface-700/30 rounded-lg hover:border-primary-500/30 transition-colors"
+          class="flex items-center justify-between p-4 bg-slate-50/50 border border-slate-100 rounded-lg hover:border-primary-200 transition-colors"
         >
           <div class="flex items-center gap-4 flex-1">
-            <div class="bg-primary-500/10 p-3 rounded-lg">
-              <FileText class="w-5 h-5 text-primary-400" />
+            <div class="bg-primary-50 p-3 rounded-lg text-primary-600">
+              <FileText class="w-5 h-5" />
             </div>
             <div class="flex-1">
-              <div class="font-medium text-white mb-1">{{ scan.fileName }}</div>
-              <div class="flex items-center gap-4 text-xs text-surface-400">
+              <div class="font-medium text-slate-900 mb-1">{{ scan.fileName }}</div>
+              <div class="flex items-center gap-4 text-xs text-slate-500">
                 <span>{{ new Date(scan.createdAt).toLocaleString() }}</span>
                 <span v-if="scan.extractedDate">Date: {{ scan.extractedDate }}</span>
               </div>
@@ -369,14 +385,14 @@ onBeforeUnmount(async () => {
           </div>
           <div class="text-right flex flex-col items-end gap-2">
             <div>
-              <div class="text-xl font-bold font-mono text-emerald-400">{{ scan.total }}</div>
-              <div class="text-xs text-surface-500">Total Found</div>
+              <div class="text-xl font-bold font-mono text-emerald-600">{{ scan.total }}</div>
+              <div class="text-xs text-slate-400">Total Found</div>
             </div>
             <a 
                 v-if="scan.fileUrl" 
                 :href="scan.fileUrl" 
                 target="_blank" 
-                class="flex items-center gap-1.5 text-xs text-primary-400 hover:text-primary-300 font-medium bg-primary-500/10 px-2 py-1 rounded hover:bg-primary-500/20 transition-colors"
+                class="flex items-center gap-1.5 text-xs text-primary-700 hover:text-primary-800 font-medium bg-primary-50 px-2 py-1 rounded hover:bg-primary-100 transition-colors"
                 @click.stop
             >
                 <ExternalLink class="w-3 h-3" />

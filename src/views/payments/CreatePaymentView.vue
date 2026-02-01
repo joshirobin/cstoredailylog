@@ -52,12 +52,12 @@ const handleSubmit = async () => {
 <template>
   <div class="max-w-3xl mx-auto space-y-6">
     <div class="flex items-center gap-4">
-        <button @click="router.back()" class="p-2 hover:bg-surface-800 rounded-lg text-surface-400 hover:text-white transition-colors">
+        <button @click="router.back()" class="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition-colors">
             <ArrowLeft class="w-5 h-5" />
         </button>
         <div>
-            <h2 class="text-2xl font-bold font-display text-white">Record Payment</h2>
-            <p class="text-surface-400 text-sm">Add a new payment to an account.</p>
+            <h2 class="text-2xl font-bold font-display text-slate-900">Record Payment</h2>
+            <p class="text-slate-500 text-sm">Add a new payment to an account.</p>
         </div>
     </div>
 
@@ -65,7 +65,7 @@ const handleSubmit = async () => {
         <form @submit.prevent="handleSubmit" class="space-y-6">
             <!-- Account Selection -->
             <div class="space-y-1.5">
-                <label class="text-xs font-medium text-surface-400 ml-1">Account</label>
+                <label class="text-xs font-medium text-slate-500 ml-1">Account</label>
                 <select v-model="form.accountId" class="input-field w-full" required>
                     <option value="" disabled>Select an account</option>
                     <option v-for="account in accountsStore.accounts" :key="account.id" :value="account.id">
@@ -76,13 +76,13 @@ const handleSubmit = async () => {
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-1.5">
-                    <label class="text-xs font-medium text-surface-400 ml-1">Payment Date</label>
+                    <label class="text-xs font-medium text-slate-500 ml-1">Payment Date</label>
                     <input v-model="form.date" type="date" class="input-field w-full" required />
                 </div>
                 <div class="space-y-1.5">
-                    <label class="text-xs font-medium text-surface-400 ml-1">Amount</label>
+                    <label class="text-xs font-medium text-slate-500 ml-1">Amount</label>
                     <div class="relative">
-                        <span class="absolute left-3 top-2.5 text-surface-500">
+                        <span class="absolute left-3 top-2.5 text-slate-400">
                            <DollarSign class="w-4 h-4" />
                         </span>
                         <input v-model.number="form.amount" type="number" step="0.01" min="0.01" class="input-field w-full pl-9" required placeholder="0.00" />
@@ -92,7 +92,7 @@ const handleSubmit = async () => {
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-1.5">
-                    <label class="text-xs font-medium text-surface-400 ml-1">Payment Method</label>
+                    <label class="text-xs font-medium text-slate-500 ml-1">Payment Method</label>
                      <select v-model="form.method" class="input-field w-full" required>
                         <option value="Cash">Cash</option>
                         <option value="Check">Check</option>
@@ -101,17 +101,17 @@ const handleSubmit = async () => {
                     </select>
                 </div>
                 <div class="space-y-1.5">
-                    <label class="text-xs font-medium text-surface-400 ml-1">Reference No. (Check #)</label>
+                    <label class="text-xs font-medium text-slate-500 ml-1">Reference No. (Check #)</label>
                     <input v-model="form.reference" type="text" class="input-field w-full" placeholder="e.g. 1024" />
                 </div>
             </div>
 
             <div class="space-y-1.5">
-                <label class="text-xs font-medium text-surface-400 ml-1">Notes</label>
+                <label class="text-xs font-medium text-slate-500 ml-1">Notes</label>
                 <textarea v-model="form.notes" class="input-field w-full min-h-[100px]" placeholder="Optional transaction notes..."></textarea>
             </div>
 
-            <div class="pt-6 border-t border-surface-700/50 flex justify-end gap-3">
+            <div class="pt-6 border-t border-slate-100 flex justify-end gap-3">
                 <button type="button" @click="router.back()" class="btn-secondary">Cancel</button>
                 <button type="submit" :disabled="isSubmitting" class="btn-primary flex items-center gap-2 min-w-[120px] justify-center">
                     <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin" />

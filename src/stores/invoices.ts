@@ -34,26 +34,28 @@ export interface Invoice {
     emailSent?: boolean;
     sentDate?: string;
     recipientEmail?: string;
+    locationId?: string;
 }
 
 import { db } from '../firebaseConfig';
-import { collection, getDocs, setDoc, updateDoc, doc, query, orderBy, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, setDoc, updateDoc, doc, query, orderBy, deleteDoc, where } from 'firebase/firestore';
+import { useLocationsStore } from './locations';
 
 export const useInvoicesStore = defineStore('invoices', () => {
     const invoices = ref<Invoice[]>([]);
 
     const fetchInvoices = async () => {
+        const locationsStore = useLocationsStore();
+        if (!locationsStore.activeLocationId) return;
+
         try {
-            // Sort by createdAt desc, fallback to date desc (client side if needed, but here queries are simple)
-            const q = query(collection(db, 'invoices'), orderBy('createdAt', 'desc'));
+            const q = query(
+                collection(db, 'invoices'),
+                where('locationId', '==', locationsStore.activeLocationId),
+                orderBy('createdAt', 'desc')
+            );
             const querySnapshot = await getDocs(q);
-            // If query is empty, try sorting by date
-            if (querySnapshot.empty) {
-                const fallbackSnapshot = await getDocs(query(collection(db, 'invoices'), orderBy('date', 'desc')));
-                invoices.value = fallbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invoice));
-            } else {
-                invoices.value = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invoice));
-            }
+            invoices.value = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invoice));
         } catch (error) {
             console.error('Failed to fetch invoices:', error);
         }
@@ -74,7 +76,10 @@ export const useInvoicesStore = defineStore('invoices', () => {
         }
     };
 
-    const addInvoice = async (invoice: Omit<Invoice, 'id'>) => {
+    const addInvoice = async (invoice: Omit<Invoice, 'id' | 'locationId'>) => {
+        const locationsStore = useLocationsStore();
+        if (!locationsStore.activeLocationId) return;
+
         const id = `INV-${Date.now().toString().slice(-6)}`;
         try {
             await setDoc(doc(db, 'invoices', id), {
@@ -88,6 +93,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
                 total: invoice.total,
                 status: invoice.status,
                 recipientEmail: invoice.recipientEmail,
+                locationId: locationsStore.activeLocationId,
                 items: invoice.items.map(i => ({ ...i })),
                 attachments: invoice.attachments || [],
                 createdAt: new Date().toISOString()
@@ -161,6 +167,51 @@ export const useInvoicesStore = defineStore('invoices', () => {
             footStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'right' },
             columnStyles: { 3: { halign: 'right' } }
         });
+
+        // Add Attachments (Receipts) as additional pages
+        if (invoice.attachments && invoice.attachments.length > 0) {
+            invoice.attachments.forEach((attachment) => {
+                if (attachment.type.startsWith('image/')) {
+                    doc.addPage();
+                    // Add a small header for the attachment
+                    doc.setFontSize(14);
+                    doc.setTextColor(...primaryColor);
+                    doc.text(`Attachment: ${attachment.name}`, 14, 15);
+
+                    try {
+                        // Fit image to page (approx 180mm wide, keeping aspect ratio)
+                        const imgProps = doc.getImageProperties(attachment.dataUrl);
+                        const pageWidth = doc.internal.pageSize.getWidth();
+                        const pageHeight = doc.internal.pageSize.getHeight();
+                        const margin = 14;
+                        const maxWidth = pageWidth - (margin * 2);
+                        const maxHeight = pageHeight - 30; // some space for header
+
+                        let width = imgProps.width;
+                        let height = imgProps.height;
+
+                        const ratio = width / height;
+
+                        if (width > maxWidth) {
+                            width = maxWidth;
+                            height = width / ratio;
+                        }
+
+                        if (height > maxHeight) {
+                            height = maxHeight;
+                            width = height * ratio;
+                        }
+
+                        doc.addImage(attachment.dataUrl, 'JPEG', margin, 25, width, height);
+                    } catch (e) {
+                        console.error('Failed to add image to PDF:', e);
+                        doc.setFontSize(10);
+                        doc.setTextColor(200, 0, 0);
+                        doc.text('Error: Could not render image attachment.', 14, 25);
+                    }
+                }
+            });
+        }
 
         return doc;
     };

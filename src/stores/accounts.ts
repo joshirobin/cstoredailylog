@@ -13,17 +13,26 @@ export interface Account {
     balance: number;
     creditLimit: number;
     status: 'Active' | 'Overdue' | 'Inactive';
+    locationId?: string;
 }
 
 import { db } from '../firebaseConfig';
-import { collection, addDoc, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, where } from 'firebase/firestore';
+import { useLocationsStore } from './locations';
 
 export const useAccountsStore = defineStore('accounts', () => {
     const accounts = ref<Account[]>([]);
 
     const fetchAccounts = async () => {
+        const locationsStore = useLocationsStore();
+        if (!locationsStore.activeLocationId) return;
+
         try {
-            const q = query(collection(db, 'accounts'), orderBy('name'));
+            const q = query(
+                collection(db, 'accounts'),
+                where('locationId', '==', locationsStore.activeLocationId),
+                orderBy('name')
+            );
             const querySnapshot = await getDocs(q);
             accounts.value = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account));
         } catch (error) {
@@ -31,10 +40,14 @@ export const useAccountsStore = defineStore('accounts', () => {
         }
     };
 
-    const addAccount = async (account: Omit<Account, 'id' | 'status'>) => {
+    const addAccount = async (account: Omit<Account, 'id' | 'status' | 'locationId'>) => {
+        const locationsStore = useLocationsStore();
+        if (!locationsStore.activeLocationId) return;
+
         try {
             await addDoc(collection(db, 'accounts'), {
                 ...account,
+                locationId: locationsStore.activeLocationId,
                 status: 'Active',
                 balance: Number(account.balance) || 0,
                 creditLimit: Number(account.creditLimit) || 0

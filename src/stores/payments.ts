@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { db } from '../firebaseConfig';
 import { collection, addDoc, getDocs, query, orderBy, where, doc, updateDoc, increment } from 'firebase/firestore';
+import { useLocationsStore } from './locations';
 
 export interface Payment {
     id: string;
@@ -12,6 +13,7 @@ export interface Payment {
     method: 'Cash' | 'Check' | 'Credit Card' | 'Bank Transfer';
     reference?: string; // Check number or transaction ID
     notes?: string;
+    locationId: string;
     createdAt: string;
 }
 
@@ -19,8 +21,15 @@ export const usePaymentsStore = defineStore('payments', () => {
     const payments = ref<Payment[]>([]);
 
     const fetchPayments = async () => {
+        const locationsStore = useLocationsStore();
+        if (!locationsStore.activeLocationId) return;
+
         try {
-            const q = query(collection(db, 'payments'), orderBy('date', 'desc'));
+            const q = query(
+                collection(db, 'payments'),
+                where('locationId', '==', locationsStore.activeLocationId),
+                orderBy('date', 'desc')
+            );
             const querySnapshot = await getDocs(q);
             payments.value = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
         } catch (error) {
@@ -39,10 +48,14 @@ export const usePaymentsStore = defineStore('payments', () => {
         }
     };
 
-    const addPayment = async (payment: Omit<Payment, 'id' | 'createdAt'>) => {
+    const addPayment = async (payment: Omit<Payment, 'id' | 'createdAt' | 'locationId'>) => {
+        const locationsStore = useLocationsStore();
+        if (!locationsStore.activeLocationId) return;
+
         try {
             const paymentData = {
                 ...payment,
+                locationId: locationsStore.activeLocationId,
                 createdAt: new Date().toISOString()
             };
 

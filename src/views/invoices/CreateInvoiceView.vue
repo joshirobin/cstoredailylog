@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRouter } from 'vue-router';
 import { useAccountsStore } from '../../stores/accounts';
 import { useInvoicesStore, type InvoiceItem, type Attachment } from '../../stores/invoices';
+import { useScannedInvoicesStore } from '../../stores/scannedInvoices';
 import { 
   Plus, Trash2, Save, ArrowLeft, Paperclip, 
   Upload, Mail, X, FileImage, File as FileIcon, 
   CheckCircle2, AlertCircle, Loader2 
 } from 'lucide-vue-next';
 
-const route = useRoute();
 const router = useRouter();
 const accountsStore = useAccountsStore();
 const invoicesStore = useInvoicesStore();
+const scannedInvoicesStore = useScannedInvoicesStore();
 
 const selectedAccountId = ref<string | number>('');
 const date = ref(new Date().toISOString().split('T')[0]);
@@ -46,30 +47,37 @@ onMounted(() => {
   d.setDate(d.getDate() + 30);
   dueDate.value = d.toISOString().split('T')[0] || '';
 
-  if (route.query.scannedTotal) {
-    const total = parseFloat(route.query.scannedTotal as string);
-    if (items.value[0]) {
-      items.value[0].price = total;
-      items.value[0].total = total;
-      items.value[0].description = (route.query.scannedDesc as string) || 'Scanned Receipt Item';
+  // Handle Pending Scan from redirected AI Scan view
+  if (scannedInvoicesStore.pendingScan) {
+    const scan = scannedInvoicesStore.pendingScan;
+    
+    // Fill basic info
+    if (scan.total && items.value[0]) {
+        items.value[0].price = parseFloat(scan.total);
+        items.value[0].total = parseFloat(scan.total);
     }
-  }
-
-  if (route.query.scannedAccountId) {
-    selectedAccountId.value = route.query.scannedAccountId as string;
-  }
-
-  if (route.query.scannedDate) {
-    const sDate = route.query.scannedDate as string;
-    // Try to parse MM/DD/YYYY or similar
-    try {
-      const parsedDate = new Date(sDate);
-      if (!isNaN(parsedDate.getTime())) {
-        date.value = parsedDate.toISOString().split('T')[0];
-      }
-    } catch (e) {
-      console.warn('Failed to parse scanned date:', sDate);
+    if (scan.description && items.value[0]) items.value[0].description = scan.description;
+    if (scan.date) {
+        const parsedDate = new Date(scan.date);
+        if (!isNaN(parsedDate.getTime())) {
+            date.value = parsedDate.toISOString().split('T')[0];
+        }
     }
+    if (scan.accountId) selectedAccountId.value = scan.accountId;
+
+    // Add scanned file as attachment
+    if (scan.file && scan.file.dataUrl) {
+        attachments.value.push({
+            id: Math.random().toString(36).substr(2, 9),
+            name: scan.file.name,
+            size: scan.file.size,
+            type: scan.file.type,
+            dataUrl: scan.file.dataUrl
+        });
+    }
+
+    // Clear it so it doesn't persist if navigated back
+    scannedInvoicesStore.setPendingScan(null);
   }
 });
 
@@ -224,8 +232,11 @@ const sendEmail = async () => {
       total: grandTotal.value,
       status: 'Draft',
       attachments: attachments.value.length > 0 ? [...attachments.value] : undefined,
-      recipientEmail: recipientEmail.value
     });
+    
+    if (!invoiceId) {
+      throw new Error('Failed to create invoice before sending.');
+    }
 
     const success = await invoicesStore.sendInvoiceEmail(invoiceId, recipientEmail.value);
     if (success) {
@@ -247,21 +258,21 @@ const sendEmail = async () => {
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-4">
-        <button @click="router.back()" class="p-2 hover:bg-surface-800 rounded-lg text-surface-400 hover:text-white transition-colors">
+        <button @click="router.back()" class="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition-colors">
           <ArrowLeft class="w-5 h-5" />
         </button>
         <div>
-          <h2 class="text-2xl font-bold font-display text-white">Create Invoice</h2>
-          <p class="text-surface-400 text-sm">Draft a new invoice for a house account.</p>
+          <h2 class="text-2xl font-bold font-display text-slate-900">Create Invoice</h2>
+          <p class="text-slate-500 text-sm">Draft a new invoice for a house account.</p>
         </div>
       </div>
     </div>
 
     <div class="glass-panel p-8">
       <!-- Account & Dates -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 pb-8 border-b border-surface-700/50">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 pb-8 border-b border-slate-100">
         <div class="space-y-1.5">
-          <label class="text-xs font-medium text-surface-400 ml-1">Bill To</label>
+          <label class="text-xs font-medium text-slate-500 ml-1">Bill To</label>
           <select v-model="selectedAccountId" class="input-field w-full appearance-none">
             <option value="" disabled>Select Account</option>
             <option v-for="acc in accountsStore.accounts" :key="acc.id" :value="acc.id">
@@ -281,7 +292,7 @@ const sendEmail = async () => {
 
       <!-- Line Items -->
       <div class="space-y-4">
-        <div class="flex items-center justify-between text-xs font-semibold text-surface-400 uppercase tracking-wider px-2">
+        <div class="flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider px-2">
            <span class="flex-1">Description</span>
            <span class="w-20 text-center">Qty</span>
            <span class="w-32 text-right">Unit Price</span>
@@ -289,12 +300,12 @@ const sendEmail = async () => {
            <span class="w-10"></span>
         </div>
 
-        <div v-for="(item, index) in items" :key="item.id" class="flex items-start gap-4 p-2 rounded-xl hover:bg-surface-800/30 transition-colors">
+        <div v-for="(item, index) in items" :key="item.id" class="flex items-start gap-4 p-2 rounded-xl hover:bg-slate-50 transition-colors">
            <div class="flex-1">
              <input 
                v-model="item.description" 
                type="text" 
-               class="bg-transparent border-none w-full text-white placeholder-surface-600 focus:ring-0 sm:text-sm p-0" 
+               class="bg-transparent border-none w-full text-slate-900 placeholder-slate-300 focus:ring-0 sm:text-sm p-0" 
                placeholder="Item description..." 
              />
            </div>
@@ -303,26 +314,26 @@ const sendEmail = async () => {
                v-model.number="item.qty" 
                @input="updateItemTotal(item)"
                type="number" 
-               class="bg-surface-900/50 border border-surface-700/50 rounded-lg w-full text-center text-white text-sm py-1.5 focus:border-primary-500 transition-colors" 
+               class="bg-slate-100/50 border border-slate-200 rounded-lg w-full text-center text-slate-900 text-sm py-1.5 focus:border-primary-500 transition-colors" 
              />
            </div>
            <div class="w-32">
              <div class="relative">
-                <span class="absolute left-2.5 top-1.5 text-surface-500 text-xs">$</span>
+                <span class="absolute left-2.5 top-1.5 text-slate-400 text-xs">$</span>
                 <input 
                   v-model.number="item.price" 
                   @input="updateItemTotal(item)"
                   type="number" 
                   step="0.01"
-                  class="bg-surface-900/50 border border-surface-700/50 rounded-lg w-full text-right text-white text-sm py-1.5 pr-2.5 pl-6 focus:border-primary-500 transition-colors" 
+                  class="bg-slate-100/50 border border-slate-200 rounded-lg w-full text-right text-slate-900 text-sm py-1.5 pr-2.5 pl-6 focus:border-primary-500 transition-colors" 
                 />
              </div>
            </div>
-           <div class="w-32 text-right font-mono text-white text-sm py-1.5">
+           <div class="w-32 text-right font-mono text-slate-900 text-sm py-1.5">
              ${{ item.total.toFixed(2) }}
            </div>
            <div class="w-10 flex justify-center py-1">
-             <button @click="removeItem(index)" class="text-surface-500 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-400/10">
+             <button @click="removeItem(index)" class="text-slate-400 hover:text-red-600 transition-colors p-1 rounded-lg hover:bg-red-50">
                <Trash2 class="w-4 h-4" />
              </button>
            </div>
@@ -449,25 +460,25 @@ const sendEmail = async () => {
       </div>
 
       <!-- Totals & Actions -->
-      <div class="mt-12 pt-8 border-t border-surface-700/50 grid grid-cols-1 md:grid-cols-2 gap-8 items-end">
+      <div class="mt-12 pt-8 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-8 items-end">
         <div class="hidden md:block">
-           <p class="text-xs text-surface-500 max-w-xs">
+           <p class="text-xs text-slate-500 max-w-xs">
              Submitting this invoice will update the account's current balance. You can still edit it until it's marked as paid.
            </p>
         </div>
         <div class="space-y-4">
            <div class="flex flex-col items-end space-y-2.5">
              <div class="flex justify-between w-full md:w-64 text-sm">
-               <span class="text-surface-400">Subtotal</span>
-               <span class="text-white font-mono">${{ subtotal.toFixed(2) }}</span>
+                <span class="text-slate-500">Subtotal</span>
+                <span class="text-slate-900 font-mono">${{ subtotal.toFixed(2) }}</span>
              </div>
              <div class="flex justify-between w-full md:w-64 text-sm">
-               <span class="text-surface-400">Tax (8%)</span>
-               <span class="text-white font-mono">${{ tax.toFixed(2) }}</span>
+                <span class="text-slate-500">Tax (8%)</span>
+                <span class="text-slate-900 font-mono">${{ tax.toFixed(2) }}</span>
              </div>
-             <div class="flex justify-between w-full md:w-64 pt-3 border-t border-surface-700/50">
-               <span class="text-lg font-bold text-white font-display">Grand Total</span>
-               <span class="text-2xl font-bold text-emerald-400 font-mono tracking-tight">${{ grandTotal.toFixed(2) }}</span>
+             <div class="flex justify-between w-full md:w-64 pt-3 border-t border-slate-100">
+                <span class="text-lg font-bold text-slate-900 font-display">Grand Total</span>
+                <span class="text-2xl font-bold text-primary-600 font-mono tracking-tight">${{ grandTotal.toFixed(2) }}</span>
              </div>
            </div>
            

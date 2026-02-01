@@ -24,8 +24,8 @@ const filteredPayments = computed(() => {
   <div class="max-w-7xl mx-auto space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-2xl font-bold font-display text-white">Payments</h2>
-        <p class="text-surface-400 text-sm">Track all incoming payments from accounts.</p>
+        <h2 class="text-2xl font-bold font-display text-slate-900">Payments</h2>
+        <p class="text-slate-500 text-sm">Track all incoming payments from accounts.</p>
       </div>
       <button @click="router.push('/payments/new')" class="btn-primary flex items-center gap-2">
         <Plus class="w-4 h-4" />
@@ -35,7 +35,7 @@ const filteredPayments = computed(() => {
 
     <div class="glass-panel p-4 flex gap-4">
       <div class="relative flex-1">
-        <Search class="absolute left-3 top-2.5 w-5 h-5 text-surface-500" />
+        <Search class="absolute left-3 top-2.5 w-5 h-5 text-slate-400" />
         <input 
           v-model="searchQuery" 
           type="text" 
@@ -49,7 +49,7 @@ const filteredPayments = computed(() => {
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead>
-            <tr class="border-b border-surface-700/50 text-surface-400 text-xs uppercase tracking-wider">
+            <tr class="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
               <th class="p-4 font-medium">Date</th>
               <th class="p-4 font-medium">Account</th>
               <th class="p-4 font-medium">Method</th>
@@ -57,27 +57,27 @@ const filteredPayments = computed(() => {
               <th class="p-4 font-medium text-right">Amount</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-surface-700/30">
-            <tr v-for="payment in filteredPayments" :key="payment.id" class="group hover:bg-surface-800/30 transition-colors">
-              <td class="p-4 text-sm text-white">
+          <tbody class="divide-y divide-slate-100">
+            <tr v-for="payment in filteredPayments" :key="payment.id" class="group hover:bg-slate-50 transition-colors">
+              <td class="p-4 text-sm text-slate-900">
                 <div class="flex items-center gap-2">
-                  <Calendar class="w-4 h-4 text-surface-500" />
+                  <Calendar class="w-4 h-4 text-slate-400" />
                   {{ new Date(payment.date).toLocaleDateString() }}
                 </div>
               </td>
-              <td class="p-4 text-sm text-white font-medium">{{ payment.accountName }}</td>
-              <td class="p-4 text-sm text-surface-300">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-800 border border-surface-700">
+              <td class="p-4 text-sm text-slate-900 font-medium">{{ payment.accountName }}</td>
+              <td class="p-4 text-sm text-slate-600">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-50 border border-slate-100">
                     <CreditCard v-if="payment.method === 'Credit Card'" class="w-3 h-3" />
                     <DollarSign v-else class="w-3 h-3" />
                     {{ payment.method }}
                 </span>
               </td>
-              <td class="p-4 text-sm text-surface-400 font-mono">{{ payment.reference || '-' }}</td>
-              <td class="p-4 text-sm font-bold text-emerald-400 text-right">${{ payment.amount.toFixed(2) }}</td>
+              <td class="p-4 text-sm text-slate-500 font-mono">{{ payment.reference || '-' }}</td>
+              <td class="p-4 text-sm font-bold text-emerald-600 text-right">${{ payment.amount.toFixed(2) }}</td>
             </tr>
             <tr v-if="filteredPayments.length === 0">
-                <td colspan="5" class="p-8 text-center text-surface-500">
+                <td colspan="5" class="p-8 text-center text-slate-500">
                     No payments found.
                 </td>
             </tr>

@@ -1,4 +1,65 @@
 {
-    "indexes": [],
+    "indexes": [
+        {
+            "collectionGroup": "tasks",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "locationId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "employees",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "locationId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "lastName",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "timesheets",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "locationId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "clockIn",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "timesheets",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "locationId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "employeeId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "clockIn",
+                    "order": "DESCENDING"
+                }
+            ]
+        }
+    ],
     "fieldOverrides": []
 }

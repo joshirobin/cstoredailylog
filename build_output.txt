@@ -1,0 +1,137 @@
+
+> vuecstoredaily@0.0.0 build
+> vue-tsc -b && vite build
+
+vite v7.3.1 building client environment for production...
+transforming...
+✓ 2133 modules transformed.
+node_modules/pdfjs-dist/build/pdf.js (1982:23): Use of eval in "node_modules/pdfjs-dist/build/pdf.js" is strongly discouraged as it poses security risks and may cause issues with minification.
+rendering chunks...
+[plugin vite:reporter] 
+(!) /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/node_modules/firebase/firestore/dist/esm/index.esm.js is dynamically imported by /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/stores/invoices.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/stores/invoices.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/stores/invoices.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/stores/invoices.ts but also statically imported by /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/firebaseConfig.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/stores/accounts.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/stores/checklists.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/stores/employees.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/stores/fuel.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/stores/inventory.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/stores/invoices.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/stores/lottery.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/stores/payments.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/stores/pricebook.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/stores/purchases.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/stores/sales.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/stores/scannedInvoices.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/stores/shifts.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/stores/tasks.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/stores/timesheets.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/stores/vault.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/views/lottery/LotteryInventoryView.vue?vue&type=script&setup=true&lang.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/views/lottery/LotterySettlementView.vue?vue&type=script&setup=true&lang.ts, /Users/robinjoshi/Desktop/AG/cstoredaily/VueCstoredaily/src/views/shifts/ShiftScheduleView.vue?vue&type=script&setup=true&lang.ts, dynamic import will not move module into another chunk.
+
+computing gzip size...
+dist/index.html                                        0.46 kB │ gzip:   0.30 kB
+dist/assets/pdf.worker.min-DKQKFyKK.js             1,087.21 kB
+dist/assets/ForgotPasswordView-ee3DNjZ0.css            0.23 kB │ gzip:   0.17 kB
+dist/assets/InvoicesListView-D4TOtXNa.css              0.25 kB │ gzip:   0.14 kB
+dist/assets/PriceBookView-BEzpTAgX.css                 0.25 kB │ gzip:   0.14 kB
+dist/assets/TimeClockView-BxogBvLB.css                 0.25 kB │ gzip:   0.14 kB
+dist/assets/PurchasesView-7jzVC634.css                 0.26 kB │ gzip:   0.14 kB
+dist/assets/ClerkDashboardView-IrG_buBK.css            0.31 kB │ gzip:   0.18 kB
+dist/assets/ShiftScheduleView-BgtOvTQg.css             0.38 kB │ gzip:   0.23 kB
+dist/assets/CreateInvoiceView-CxAagFPI.css             0.48 kB │ gzip:   0.22 kB
+dist/assets/DashboardLayout-CO6f9Zgg.css               0.58 kB │ gzip:   0.27 kB
+dist/assets/DashboardView-Duh_68bu.css                 0.59 kB │ gzip:   0.31 kB
+dist/assets/DailyChecklistsView-VAy0vfLf.css           0.66 kB │ gzip:   0.24 kB
+dist/assets/TasksView-7cz9mVqa.css                     0.73 kB │ gzip:   0.21 kB
+dist/assets/FuelInventoryView-BIKaFXcZ.css             0.98 kB │ gzip:   0.39 kB
+dist/assets/DailySalesView-IrXzbMiU.css                3.63 kB │ gzip:   0.94 kB
+dist/assets/index-CFTZUenP.css                        93.03 kB │ gzip:  13.26 kB
+dist/assets/_plugin-vue_export-helper-DlAUqK2U.js      0.09 kB │ gzip:   0.10 kB
+dist/assets/check-CTGhLgad.js                          0.13 kB │ gzip:   0.14 kB
+dist/assets/chevron-up-DpMVAvxR.js                     0.14 kB │ gzip:   0.15 kB
+dist/assets/chevron-down-CLmYfgOK.js                   0.14 kB │ gzip:   0.15 kB
+dist/assets/chevron-left-Clp-54b4.js                   0.14 kB │ gzip:   0.15 kB
+dist/assets/chevron-right-D0mDzgzy.js                  0.14 kB │ gzip:   0.15 kB
+dist/assets/loader-circle-MVT70Mq6.js                  0.15 kB │ gzip:   0.16 kB
+dist/assets/plus-EUEY9vYY.js                           0.16 kB │ gzip:   0.16 kB
+dist/assets/x-BkUQhHC8.js                              0.16 kB │ gzip:   0.16 kB
+dist/assets/clock-SL3XyewW.js                          0.17 kB │ gzip:   0.17 kB
+dist/assets/arrow-left-CwtHIDb4.js                     0.17 kB │ gzip:   0.17 kB
+dist/assets/arrow-right-BkZYnkki.js                    0.17 kB │ gzip:   0.17 kB
+dist/assets/search-C1JRNplI.js                         0.18 kB │ gzip:   0.17 kB
+dist/assets/circle-check-PtbW7x3u.js                   0.18 kB │ gzip:   0.17 kB
+dist/assets/trending-up-Cn8yFYZc.js                    0.18 kB │ gzip:   0.18 kB
+dist/assets/circle-check-big-C4knTiv_.js               0.20 kB │ gzip:   0.19 kB
+dist/assets/play-Cxkq_1sJ.js                           0.20 kB │ gzip:   0.19 kB
+dist/assets/user-8RgNyWIh.js                           0.20 kB │ gzip:   0.19 kB
+dist/assets/lock-Cv3AVHFI.js                           0.21 kB │ gzip:   0.20 kB
+dist/assets/credit-card-BLOAAAvk.js                    0.22 kB │ gzip:   0.20 kB
+dist/assets/droplet-DM5UtOkj.js                        0.22 kB │ gzip:   0.20 kB
+dist/assets/mail-BMuuOxO0.js                           0.22 kB │ gzip:   0.21 kB
+dist/assets/dollar-sign-eeNdiIuU.js                    0.23 kB │ gzip:   0.20 kB
+dist/assets/briefcase-C3m4PfyM.js                      0.23 kB │ gzip:   0.21 kB
+dist/assets/ellipsis-DbyxnlfA.js                       0.23 kB │ gzip:   0.17 kB
+dist/assets/target-mTOB71BE.js                         0.23 kB │ gzip:   0.17 kB
+dist/assets/log-out-B-pJYLOy.js                        0.24 kB │ gzip:   0.20 kB
+dist/assets/upload-BRbHOHp2.js                         0.24 kB │ gzip:   0.20 kB
+dist/assets/paperclip-BIxnE7Pk.js                      0.24 kB │ gzip:   0.20 kB
+dist/assets/pen-DIGccdDa.js                            0.24 kB │ gzip:   0.21 kB
+dist/assets/history-DmXWX6fW.js                        0.25 kB │ gzip:   0.21 kB
+dist/assets/globe-CRNvhleN.js                          0.25 kB │ gzip:   0.20 kB
+dist/assets/circle-alert-D-qStS3q.js                   0.26 kB │ gzip:   0.20 kB
+dist/assets/chart-column-C_6PP4LG.js                   0.26 kB │ gzip:   0.20 kB
+dist/assets/external-link-FhxIshsB.js                  0.26 kB │ gzip:   0.21 kB
+dist/assets/funnel-DHscTXnI.js                         0.26 kB │ gzip:   0.22 kB
+dist/assets/calendar-Bf6ZAswD.js                       0.27 kB │ gzip:   0.21 kB
+dist/assets/zap-BajVuB8q.js                            0.27 kB │ gzip:   0.22 kB
+dist/assets/triangle-alert-BH2rSnr-.js                 0.27 kB │ gzip:   0.22 kB
+dist/assets/file-DmvoBMbL.js                           0.28 kB │ gzip:   0.22 kB
+dist/assets/shopping-cart-B74O03QG.js                  0.30 kB │ gzip:   0.24 kB
+dist/assets/receipt-VT0Fcr6G.js                        0.30 kB │ gzip:   0.22 kB
+dist/assets/users-CzmdU8WO.js                          0.31 kB │ gzip:   0.23 kB
+dist/assets/user-plus-DHtuK2wl.js                      0.32 kB │ gzip:   0.24 kB
+dist/assets/shield-check-Da2Le9O2.js                   0.33 kB │ gzip:   0.26 kB
+dist/assets/refresh-cw-CHZ4-8Tp.js                     0.33 kB │ gzip:   0.24 kB
+dist/assets/pdf.worker.min-CwMb-25i.js                 0.33 kB │ gzip:   0.27 kB
+dist/assets/tag-Blf1DbWA.js                            0.33 kB │ gzip:   0.26 kB
+dist/assets/save-DA5lxOao.js                           0.34 kB │ gzip:   0.24 kB
+dist/assets/trash-2-CmWroaaO.js                        0.34 kB │ gzip:   0.23 kB
+dist/assets/layout-dashboard-B4Sfw0uU.js               0.36 kB │ gzip:   0.22 kB
+dist/assets/package-098HL2uL.js                        0.38 kB │ gzip:   0.27 kB
+dist/assets/file-text-CVClhyUb.js                      0.39 kB │ gzip:   0.26 kB
+dist/assets/timer-C6lfPecp.js                          0.43 kB │ gzip:   0.28 kB
+dist/assets/notifications-nGPNaUtR.js                  0.48 kB │ gzip:   0.31 kB
+dist/assets/calendar-days-DZW3_lJo.js                  0.50 kB │ gzip:   0.27 kB
+dist/assets/sparkles-jRt-hcMM.js                       0.50 kB │ gzip:   0.29 kB
+dist/assets/calculator-5kjP46MM.js                     0.54 kB │ gzip:   0.29 kB
+dist/assets/ticket-D2zxQQMW.js                         0.58 kB │ gzip:   0.34 kB
+dist/assets/vault-CHjrJhOJ.js                          0.67 kB │ gzip:   0.32 kB
+dist/assets/_commonjsHelpers-CE1G-McA.js               0.76 kB │ gzip:   0.40 kB
+dist/assets/payments-DBo9sfuA.js                       0.90 kB │ gzip:   0.46 kB
+dist/assets/sales-D4KAP9s6.js                          0.96 kB │ gzip:   0.52 kB
+dist/assets/scannedInvoices-DNi5_2xV.js                1.06 kB │ gzip:   0.59 kB
+dist/assets/createLucideIcon-CdRPfWGd.js               1.25 kB │ gzip:   0.72 kB
+dist/assets/tasks-C4z2mjLw.js                          1.30 kB │ gzip:   0.61 kB
+dist/assets/timesheets-B3dZECdz.js                     1.53 kB │ gzip:   0.73 kB
+dist/assets/employees-bhWn1peO.js                      1.61 kB │ gzip:   0.81 kB
+dist/assets/shifts-JwvqDXii.js                         2.18 kB │ gzip:   0.69 kB
+dist/assets/accounts-CnwqqTMC.js                       2.57 kB │ gzip:   1.34 kB
+dist/assets/lottery-DoHUwNl2.js                        2.86 kB │ gzip:   1.00 kB
+dist/assets/PaymentsView-CzbBb9Tg.js                   3.18 kB │ gzip:   1.47 kB
+dist/assets/LoginView-By4hjeBn.js                      3.41 kB │ gzip:   1.55 kB
+dist/assets/SignUpView-DkUxXxYg.js                     4.03 kB │ gzip:   1.70 kB
+dist/assets/AccountsView-CgtRw3Jc.js                   4.13 kB │ gzip:   1.66 kB
+dist/assets/ForgotPasswordView-Cjh9NTg9.js             4.45 kB │ gzip:   1.92 kB
+dist/assets/CreateAccountView-DzATQB3g.js              4.58 kB │ gzip:   1.78 kB
+dist/assets/CreatePaymentView-jAz1xojG.js              4.60 kB │ gzip:   1.84 kB
+dist/assets/LotterySettlementView-B2u8sCtR.js          5.76 kB │ gzip:   2.15 kB
+dist/assets/invoices-miV7-hR5.js                       6.63 kB │ gzip:   2.93 kB
+dist/assets/DailyReconciliationView-DlA7ahZS.js        8.11 kB │ gzip:   3.05 kB
+dist/assets/InvoicesListView-CJCIJr4k.js              10.28 kB │ gzip:   3.86 kB
+dist/assets/ScanInvoiceView-Bzi4tgtN.js               10.52 kB │ gzip:   4.19 kB
+dist/assets/LotteryDashboard-iqseEKvw.js              12.92 kB │ gzip:   3.78 kB
+dist/assets/DashboardLayout-RxnO0ZOO.js               13.04 kB │ gzip:   4.55 kB
+dist/assets/TimeClockView-o93ilARV.js                 13.41 kB │ gzip:   4.69 kB
+dist/assets/FuelInventoryView-CVC9Kvgl.js             14.44 kB │ gzip:   4.83 kB
+dist/assets/LotteryInventoryView-Bv0nfvUL.js          15.11 kB │ gzip:   4.21 kB
+dist/assets/InventoryView-C8Q1GepY.js                 15.21 kB │ gzip:   4.32 kB
+dist/assets/CreateInvoiceView-CS7B88PX.js             16.44 kB │ gzip:   5.59 kB
+dist/assets/DocumentVaultView-DgvDoiQc.js             17.17 kB │ gzip:   5.60 kB
+dist/assets/ClerkDashboardView-DedGndtT.js            20.10 kB │ gzip:   5.69 kB
+dist/assets/EmployeesView-CBFje0Fn.js                 20.36 kB │ gzip:   6.00 kB
+dist/assets/DashboardView-BiCHoe25.js                 21.35 kB │ gzip:   6.67 kB
+dist/assets/purify.es-Bzr520pe.js                     22.45 kB │ gzip:   8.63 kB
+dist/assets/DailySalesView-BG8sZkw1.js                26.93 kB │ gzip:   7.84 kB
+dist/assets/DailyChecklistsView-Cqs_lZHR.js           27.86 kB │ gzip:   8.49 kB
+dist/assets/PurchasesView-C1tf70jP.js                 32.61 kB │ gzip:   9.23 kB
+dist/assets/ShiftScheduleView-w42XNsmG.js             33.51 kB │ gzip:   9.20 kB
+dist/assets/index.es-8fSyXcNq.js                     158.67 kB │ gzip:  52.98 kB
+dist/assets/html2canvas.esm-DXEQVQnt.js              201.04 kB │ gzip:  47.43 kB
+dist/assets/TasksView-BMwaW5uD.js                    247.26 kB │ gzip:  79.22 kB
+dist/assets/pdf-CPBE4-6r.js                          327.81 kB │ gzip:  98.05 kB
+dist/assets/PriceBookView-DHfqblHR.js                371.70 kB │ gzip: 124.06 kB
+dist/assets/jspdf.plugin.autotable-CPVZA_tg.js       415.61 kB │ gzip: 135.11 kB
+dist/assets/index-i68lB5Rd.js                        484.70 kB │ gzip: 160.06 kB
+✓ built in 3.30s

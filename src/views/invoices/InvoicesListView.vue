@@ -6,7 +6,7 @@ import {
   Plus, Search, Filter, FileText, Mail, 
   Paperclip, MoreHorizontal, Download, 
   Trash2, Eye, Calendar, User, 
-  CheckCircle2, Clock, AlertCircle
+  CheckCircle2, Clock, AlertCircle, X, File as FileIcon
 } from 'lucide-vue-next';
 import { useNotificationStore } from '../../stores/notifications';
 
@@ -14,6 +14,11 @@ const invoicesStore = useInvoicesStore();
 const notificationStore = useNotificationStore();
 const searchQuery = ref('');
 const statusFilter = ref('All');
+const selectedInvoiceAttachments = ref<any[] | null>(null);
+
+const openAttachmentPreview = (attachments: any[]) => {
+  selectedInvoiceAttachments.value = attachments;
+};
 
 const filteredInvoices = computed(() => {
   return invoicesStore.invoices.filter(invoice => {
@@ -29,11 +34,11 @@ const filteredInvoices = computed(() => {
 
 const getStatusClass = (status: string) => {
   switch (status) {
-    case 'Paid': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-    case 'Sent': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-    case 'Draft': return 'bg-surface-700/50 text-surface-400 border-surface-600';
-    case 'Overdue': return 'bg-red-500/10 text-red-400 border-red-500/20';
-    default: return 'bg-surface-700/50 text-surface-400 border-surface-600';
+    case 'Paid': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+    case 'Sent': return 'bg-blue-50 text-blue-700 border-blue-100';
+    case 'Draft': return 'bg-slate-100 text-slate-500 border-slate-200';
+    case 'Overdue': return 'bg-red-50 text-red-700 border-red-100';
+    default: return 'bg-slate-100 text-slate-500 border-slate-200';
   }
 };
 
@@ -90,8 +95,8 @@ const formatDate = (dateStr: string) => {
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div>
-        <h2 class="text-2xl font-bold font-display text-white">Invoices</h2>
-        <p class="text-surface-400 text-sm">Manage, track, and send invoices to your customers.</p>
+        <h2 class="text-2xl font-bold font-display text-slate-900">Invoices</h2>
+        <p class="text-slate-500 text-sm">Manage, track, and send invoices to your customers.</p>
       </div>
       <RouterLink to="/invoices/new" class="btn-primary flex items-center justify-center gap-2">
         <Plus class="w-4 h-4" />
@@ -127,7 +132,7 @@ const formatDate = (dateStr: string) => {
     <div class="glass-panel overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm">
-          <thead class="bg-surface-800/50 text-surface-400 uppercase tracking-wider text-xs font-semibold">
+          <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider text-xs font-semibold">
             <tr>
               <th class="px-6 py-4">Invoice</th>
               <th class="px-6 py-4">Customer</th>
@@ -137,37 +142,41 @@ const formatDate = (dateStr: string) => {
               <th class="px-6 py-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-surface-800">
+          <tbody class="divide-y divide-slate-100">
             <tr v-if="filteredInvoices.length === 0">
               <td colspan="6" class="px-6 py-12 text-center">
                 <div class="flex flex-col items-center gap-3">
-                  <div class="p-3 rounded-full bg-surface-800 text-surface-500">
+                  <div class="p-4 rounded-2xl bg-slate-50 text-slate-400 mb-4 inline-block">
                     <FileText class="w-8 h-8" />
                   </div>
-                  <p class="text-surface-400 font-medium">No invoices found matching your criteria.</p>
-                  <RouterLink to="/invoices/new" class="text-primary-400 hover:text-primary-300 text-sm font-medium">Create your first invoice</RouterLink>
+                  <p class="text-slate-500 font-medium">No invoices found matching your criteria.</p>
+                  <RouterLink to="/invoices/new" class="text-primary-600 hover:text-primary-500 text-sm font-medium">Create your first invoice</RouterLink>
                 </div>
               </td>
             </tr>
-            <tr v-for="invoice in filteredInvoices" :key="invoice.id" class="hover:bg-surface-800/30 transition-colors group">
+            <tr v-for="invoice in filteredInvoices" :key="invoice.id" class="hover:bg-slate-50 transition-colors group">
               <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
-                  <div class="p-2 rounded bg-surface-800 text-primary-400 group-hover:bg-primary-500/10 group-hover:text-primary-300 transition-colors">
+                  <div class="p-2 rounded bg-slate-50 text-primary-600 group-hover:bg-white group-hover:shadow-sm transition-colors">
                     <FileText class="w-4 h-4" />
                   </div>
                   <div>
-                    <div class="font-bold text-white tracking-tight">{{ invoice.id }}</div>
-                    <div class="flex items-center gap-1.5 mt-0.5">
-                      <Paperclip v-if="invoice.attachments?.length" class="w-3 h-3 text-surface-500" />
-                      <span v-if="invoice.attachments?.length" class="text-[10px] text-surface-500 font-medium">{{ invoice.attachments.length }} file(s)</span>
-                    </div>
+                    <div class="font-bold text-slate-900 tracking-tight">{{ invoice.id }}</div>
+                     <div 
+                        v-if="invoice.attachments?.length" 
+                        @click="openAttachmentPreview(invoice.attachments)"
+                        class="flex items-center gap-1.5 mt-0.5 cursor-pointer hover:text-primary-600 transition-colors"
+                      >
+                        <Paperclip class="w-3 h-3 text-slate-400" />
+                        <span class="text-[10px] text-slate-400 font-medium">{{ invoice.attachments.length }} file(s)</span>
+                      </div>
                   </div>
                 </div>
               </td>
               <td class="px-6 py-4">
                 <div class="flex items-center gap-2">
-                  <User class="w-3.5 h-3.5 text-surface-500" />
-                  <span class="font-medium text-surface-200">{{ invoice.accountName }}</span>
+                  <User class="w-3.5 h-3.5 text-slate-400" />
+                  <span class="font-medium text-slate-900">{{ invoice.accountName }}</span>
                 </div>
                 <div v-if="invoice.recipientEmail" class="text-[10px] text-surface-500 mt-0.5 ml-5">{{ invoice.recipientEmail }}</div>
               </td>
@@ -233,5 +242,56 @@ const formatDate = (dateStr: string) => {
         </table>
       </div>
     </div>
+
+    <!-- Attachment Preview Modal -->
+    <Teleport to="body">
+      <div v-if="selectedInvoiceAttachments" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
+        <div class="glass-panel max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300">
+          <div class="p-6 border-b border-surface-800 flex items-center justify-between">
+             <div class="flex items-center gap-3">
+               <Paperclip class="w-5 h-5 text-primary-400" />
+               <h3 class="text-xl font-bold text-white">Attached Receipts</h3>
+             </div>
+             <button @click="selectedInvoiceAttachments = null" class="p-2 hover:bg-surface-800 rounded-lg text-surface-400 hover:text-white transition-colors">
+               <X class="w-6 h-6" />
+             </button>
+          </div>
+          
+          <div class="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar bg-surface-950/50">
+            <div v-for="att in selectedInvoiceAttachments" :key="att.id" class="space-y-4">
+              <div class="flex items-center justify-between px-2">
+                <span class="text-sm font-medium text-surface-400">{{ att.name }}</span>
+                <span class="text-xs text-surface-600 uppercase">{{ att.type }}</span>
+              </div>
+              <div class="rounded-2xl overflow-hidden border border-surface-800 bg-black/40">
+                <img v-if="att.type.startsWith('image/')" :src="att.dataUrl" class="w-full h-auto" />
+                <div v-else class="p-12 text-center space-y-4">
+                  <FileIcon class="w-16 h-16 mx-auto text-surface-700" />
+                  <p class="text-surface-400 text-sm">PDF Preview not available in this view. Please download the invoice PDF to see full attachments.</p>
+                </div>
+              </div>
+              <div class="h-px bg-surface-800 mt-8"></div>
+            </div>
+          </div>
+          
+          <div class="p-6 border-t border-surface-800 bg-surface-900/50 flex justify-end">
+             <button @click="selectedInvoiceAttachments = null" class="btn-secondary px-8">Close Viewer</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #1f2937;
+  border-radius: 10px;
+}
+</style>

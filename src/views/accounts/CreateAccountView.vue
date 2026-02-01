@@ -55,8 +55,8 @@ const handleSave = () => {
   <div class="max-w-3xl mx-auto space-y-6">
     <div class="flex items-center justify-between">
       <div>
-         <h2 class="text-2xl font-bold font-display text-white">New Account</h2>
-         <p class="text-surface-400 text-sm">Create a new house charge account manually or by scanning ID.</p>
+         <h2 class="text-2xl font-bold font-display text-slate-900">New Account</h2>
+         <p class="text-slate-500 text-sm">Create a new house charge account manually or by scanning ID.</p>
       </div>
       <button 
         @click="simulateScan" 
@@ -69,7 +69,7 @@ const handleSave = () => {
       </button>
     </div>
 
-    <div v-if="showSuccess" class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-lg flex items-center gap-3">
+    <div v-if="showSuccess" class="bg-emerald-50 border border-emerald-100 text-emerald-700 p-4 rounded-lg flex items-center gap-3">
       <Check class="w-5 h-5" />
       <span>Successfully extracted data from ID! Please review the details below.</span>
     </div>
@@ -78,36 +78,36 @@ const handleSave = () => {
       <form @submit.prevent="handleSave" class="space-y-6">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="space-y-1.5 pt-2">
-            <label class="text-xs font-medium text-surface-400 ml-1">Business Name</label>
+            <label class="text-xs font-medium text-slate-500 ml-1">Business Name</label>
             <input v-model="form.businessName" type="text" class="input-field w-full" placeholder="e.g. Green Logistics" required />
           </div>
           <div class="space-y-1.5 pt-2">
-            <label class="text-xs font-medium text-surface-400 ml-1">Contact Person</label>
+            <label class="text-xs font-medium text-slate-500 ml-1">Contact Person</label>
             <input v-model="form.contactName" type="text" class="input-field w-full" placeholder="e.g. Mark Smith" required />
           </div>
           <div class="space-y-1.5 pt-2">
-            <label class="text-xs font-medium text-surface-400 ml-1">Email Address</label>
+            <label class="text-xs font-medium text-slate-500 ml-1">Email Address</label>
             <input v-model="form.email" type="email" class="input-field w-full" placeholder="invoices@company.com" required />
           </div>
           <div class="space-y-1.5 pt-2">
-            <label class="text-xs font-medium text-surface-400 ml-1">Phone Number</label>
+            <label class="text-xs font-medium text-slate-500 ml-1">Phone Number</label>
             <input v-model="form.phone" type="tel" class="input-field w-full" placeholder="(555) 123-4567" />
           </div>
           <div class="md:col-span-2 space-y-1.5 pt-2">
-            <label class="text-xs font-medium text-surface-400 ml-1">Billing Address</label>
+            <label class="text-xs font-medium text-slate-500 ml-1">Billing Address</label>
             <input v-model="form.address" type="text" class="input-field w-full" placeholder="1234 Main St, City, ST 12345" />
           </div>
            <div class="space-y-1.5 pt-2">
-            <label class="text-xs font-medium text-surface-400 ml-1">Credit Limit</label>
+            <label class="text-xs font-medium text-slate-500 ml-1">Credit Limit</label>
             <div class="relative">
-              <span class="absolute left-3 top-2.5 text-surface-500">$</span>
+              <span class="absolute left-3 top-2.5 text-slate-400">$</span>
               <input v-model.number="form.creditLimit" type="number" class="input-field w-full pl-8" />
             </div>
           </div>
         </div>
 
-        <div class="pt-6 border-t border-surface-700/50 flex justify-end gap-4">
-          <button type="button" @click="router.back()" class="text-surface-400 hover:text-white font-medium text-sm px-4">Cancel</button>
+        <div class="pt-6 border-t border-slate-100 flex justify-end gap-4">
+          <button type="button" @click="router.back()" class="text-slate-400 hover:text-slate-900 font-medium text-sm px-4">Cancel</button>
           <button type="submit" class="btn-primary">Create Account</button>
         </div>
       </form>

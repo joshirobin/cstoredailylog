@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@vueuse/core": "^14.1.0",
+    "chart.js": "^4.5.1",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
@@ -19,12 +20,14 @@
     "knex": "^3.1.0",
     "lucide-vue-next": "^0.563.0",
     "nodemailer": "^7.0.12",
-    "pdfjs-dist": "^5.4.530",
+    "pdfjs-dist": "^3.11.174",
     "pg": "^8.17.2",
     "pinia": "^3.0.4",
     "tesseract.js": "^7.0.0",
     "vue": "^3.5.24",
-    "vue-router": "^4.6.4"
+    "vue-chartjs": "^5.3.3",
+    "vue-router": "^4.6.4",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",

@@ -24,7 +24,7 @@ const getColorClass = (type: string) => {
         case 'success': return 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400';
         case 'error': return 'border-rose-500/50 bg-rose-500/10 text-rose-400';
         case 'warning': return 'border-amber-500/50 bg-amber-500/10 text-amber-400';
-        default: return 'border-blue-500/50 bg-blue-500/10 text-blue-400';
+        default: return 'border-indigo-500/50 bg-indigo-500/10 text-indigo-400';
     }
 };
 </script>
@@ -61,6 +61,6 @@ const getColorClass = (type: string) => {
 
 <style scoped>
 .glass-panel {
-    background: rgba(15, 23, 42, 0.8);
+    background: rgba(9, 9, 11, 0.85);
 }
 </style>

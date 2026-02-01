@@ -28,47 +28,47 @@ const handleReset = async () => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-surface-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans selection:bg-primary-500/30">
+    <div class="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans selection:bg-primary-500/30">
         <div class="sm:mx-auto sm:w-full sm:max-w-md">
-            <!-- Glass Header Card -->
-            <div class="glass-panel p-8 text-center space-y-4">
-                <div class="inline-flex p-3 bg-primary-500/10 rounded-2xl ring-1 ring-primary-500/20">
-                    <Mail class="w-8 h-8 text-primary-400" />
+            <!-- Clean Header Card -->
+            <div class="bg-white border border-slate-100 rounded-[2.5rem] p-8 text-center space-y-4 shadow-sm">
+                <div class="inline-flex p-4 border border-slate-100 bg-white rounded-2xl shadow-sm text-primary-500">
+                    <Mail class="w-8 h-8" />
                 </div>
                 <div>
-                    <h2 class="text-3xl font-extrabold text-white tracking-tight">Reset Password</h2>
-                    <p class="mt-2 text-sm text-surface-400">
-                        Enter your email and we'll send you a link to get back into your account.
+                    <h2 class="text-3xl font-black text-slate-900 uppercase italic tracking-tighter">Reset Access</h2>
+                    <p class="mt-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                        We'll send a secure link to your inbox.
                     </p>
                 </div>
             </div>
 
-            <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-                <div class="glass-panel px-4 py-8 sm:px-10">
+            <div class="mt-6 sm:mx-auto sm:w-full sm:max-w-md">
+                <div class="bg-white border border-slate-100 rounded-[2.5rem] px-4 py-8 sm:px-10 shadow-xl shadow-slate-200/50">
                     <div v-if="success" class="text-center space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div class="inline-flex p-4 bg-emerald-500/10 rounded-full border border-emerald-500/20">
-                            <CheckCircle2 class="w-12 h-12 text-emerald-400" />
+                        <div class="inline-flex p-4 bg-emerald-50 rounded-full border border-emerald-100">
+                            <CheckCircle2 class="w-12 h-12 text-emerald-500" />
                         </div>
                         <div class="space-y-2">
-                            <h3 class="text-xl font-bold text-white">Check your email</h3>
-                            <p class="text-surface-400 text-sm leading-relaxed">
-                                We have sent a password reset link to <br>
-                                <span class="text-white font-medium">{{ email }}</span>
+                            <h3 class="text-xl font-black text-slate-900 uppercase italic">Check your email</h3>
+                            <p class="text-slate-500 text-sm font-bold">
+                                A reset link has been dispatched to:<br>
+                                <span class="text-primary-600">{{ email }}</span>
                             </p>
                         </div>
-                        <RouterLink to="/login" class="btn-primary w-full flex items-center justify-center gap-2">
+                        <RouterLink to="/login" class="btn-primary w-full flex items-center justify-center gap-2 py-4 rounded-2xl">
                             <ArrowLeft class="w-4 h-4" />
-                            Back to Sign In
+                            <span class="font-black uppercase tracking-widest text-xs">Return to Login</span>
                         </RouterLink>
                     </div>
 
                     <form v-else @submit.prevent="handleReset" class="space-y-6">
-                        <div>
-                            <label for="email" class="block text-xs font-bold text-surface-400 uppercase tracking-widest mb-2 px-1">
+                        <div class="space-y-2">
+                            <label for="email" class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">
                                 Email Address
                             </label>
                             <div class="relative group">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-surface-500 group-focus-within:text-primary-400 transition-colors">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-300 group-focus-within:text-primary-500 transition-colors">
                                     <Mail class="h-5 w-5" />
                                 </div>
                                 <input 
@@ -77,33 +77,33 @@ const handleReset = async () => {
                                     name="email" 
                                     type="email" 
                                     required 
-                                    class="input-field block w-full pl-10 h-12"
-                                    placeholder="manager@store.com"
+                                    class="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl pl-12 pr-6 py-4 text-slate-900 font-bold placeholder-slate-200 focus:bg-white focus:border-primary-500 transition-all outline-none text-sm"
+                                    placeholder="Enter your registered email"
                                 />
                             </div>
                         </div>
 
-                        <div v-if="error" class="flex items-center gap-2 text-rose-400 text-sm bg-rose-500/10 border border-rose-500/20 p-4 rounded-xl animate-in shake">
-                            <AlertCircle class="h-5 w-5 flex-shrink-0" />
-                            <p>{{ error }}</p>
+                        <div v-if="error" class="flex items-center gap-2 text-rose-500 text-xs font-bold bg-rose-50 border border-rose-100 p-4 rounded-2xl animate-in shake">
+                            <AlertCircle class="h-4 w-4 flex-shrink-0" />
+                            <p class="uppercase tracking-tight">{{ error }}</p>
                         </div>
 
                         <div class="space-y-4 pt-2">
                             <button 
                                 type="submit" 
                                 :disabled="isSubmitting"
-                                class="btn-primary w-full flex justify-center py-3.5 px-4 text-sm font-bold shadow-lg shadow-primary-500/20 transition-all active:scale-[0.98]"
+                                class="btn-primary w-full flex justify-center py-4 px-4 text-xs font-black uppercase tracking-widest shadow-xl shadow-primary-500/20 transition-all active:scale-[0.98] rounded-2xl"
                             >
                                 <Loader2 v-if="isSubmitting" class="w-5 h-5 animate-spin mr-2" />
                                 <span v-if="!isSubmitting">Send Reset Link</span>
-                                <span v-else>Sending...</span>
+                                <span v-else>Processing...</span>
                             </button>
 
                             <RouterLink 
                                 to="/login" 
-                                class="flex items-center justify-center gap-2 text-sm text-surface-400 hover:text-white transition-colors py-2"
+                                class="flex items-center justify-center gap-2 text-[10px] font-black text-slate-400 hover:text-primary-500 uppercase tracking-widest transition-colors py-2"
                             >
-                                <ArrowLeft class="w-4 h-4" />
+                                <ArrowLeft class="w-3 h-3" />
                                 Back to Login
                             </RouterLink>
                         </div>
@@ -111,13 +111,8 @@ const handleReset = async () => {
                 </div>
             </div>
         </div>
-        
-        <!-- Decorative Elements -->
-        <div class="fixed top-0 left-0 w-full h-full pointer-events-none -z-10 overflow-hidden">
-            <div class="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary-500/10 rounded-full blur-[120px]"></div>
-            <div class="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-secondary-500/10 rounded-full blur-[120px]"></div>
-        </div>
     </div>
+
 </template>
 
 <style scoped>

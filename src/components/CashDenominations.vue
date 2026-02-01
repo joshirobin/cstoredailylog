@@ -39,7 +39,6 @@ const total = computed(() => {
 watch(total, (newVal) => {
   emit('update:modelValue', newVal);
   
-  // Format details for storage
   const details = {
     bills: bills.value.reduce((acc: any, b) => { if(b.count > 0) acc[b.value] = b.count; return acc; }, {}),
     coins: coins.value.reduce((acc: any, c) => { if(c.count > 0) acc[c.value] = c.count; return acc; }, {})
@@ -47,7 +46,6 @@ watch(total, (newVal) => {
   emit('update:details', details);
 });
 
-// Watch external model changes (e.g. reset)
 watch(() => props.modelValue, (newVal) => {
   if (newVal === 0 || newVal === null) {
      if (total.value !== 0 && total.value !== newVal) {
@@ -59,67 +57,85 @@ watch(() => props.modelValue, (newVal) => {
 </script>
 
 <template>
-  <div class="bg-surface-900/30 border border-surface-700/50 rounded-xl overflow-hidden transition-all">
+  <div class="bg-transparent border-2 border-slate-100 rounded-3xl overflow-hidden transition-all mb-4">
     <!-- Header with Total -->
-    <div class="p-4 bg-surface-800/30 border-b border-surface-700/50">
+    <div class="p-6 bg-slate-50 border-b border-slate-100">
       <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="bg-primary-500/10 p-2 rounded-lg text-primary-400">
-             <Calculator class="w-5 h-5" />
+        <div class="flex items-center gap-4">
+          <div class="bg-primary-100 p-3 rounded-2xl text-primary-600">
+             <Calculator class="w-6 h-6" />
           </div>
           <div>
-             <div class="text-xs text-surface-400 font-medium uppercase tracking-wide">{{ label }}</div>
-             <div class="text-xl font-bold font-mono text-white">${{ total.toFixed(2) }}</div>
+             <div class="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1">{{ label }}</div>
+             <div class="text-3xl font-black font-mono text-slate-900 tracking-tighter">${{ total.toFixed(2) }}</div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Denomination Inputs - Always Visible -->
-    <div class="p-4 bg-surface-900/50">
-       <div class="grid grid-cols-2 gap-6">
+    <!-- Denomination Inputs -->
+    <div class="p-8 bg-white/50 backdrop-blur-sm">
+       <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
           <!-- Bills -->
-          <div class="space-y-3">
-            <h4 class="text-xs font-semibold text-surface-400 uppercase mb-2">Bills</h4>
-            <div v-for="bill in bills" :key="bill.value" class="flex items-center gap-3">
-               <span class="w-10 text-sm font-medium text-surface-300 text-right">{{ bill.label }}</span>
+          <div class="space-y-4">
+            <h4 class="text-[11px] font-black text-slate-900 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Paper Currency</h4>
+            <div v-for="bill in bills" :key="bill.value" class="flex items-center gap-4 group">
+               <span class="w-12 text-sm font-black text-slate-400 text-right italic">{{ bill.label }}</span>
                <div class="flex-1 relative">
-                 <span class="absolute left-3 top-1.5 text-surface-600 text-xs">x</span>
+                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 font-bold text-xs uppercase pointer-events-none">qty</span>
                  <input 
                    v-model.number="bill.count" 
                    type="number" 
                    min="0"
-                   class="w-full bg-surface-800 border border-surface-700 rounded px-3 py-2 pl-6 text-base text-white focus:ring-1 focus:ring-primary-500/50 focus:border-primary-500"
+                   class="no-spinner w-full h-14 bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 pl-12 text-lg font-black text-slate-900 focus:bg-white focus:border-primary-500 transition-all outline-none"
+                   placeholder="0"
                  />
                </div>
-               <div class="w-24 text-right text-xs font-mono text-surface-400">
-                 <span v-if="bill.count > 0">{{ bill.value }} × {{ bill.count }} = </span>
-                 <span class="text-white font-medium">${{ (bill.count * bill.value).toFixed(0) }}</span>
+               <div class="w-28 text-right">
+                 <span class="text-lg font-black font-mono text-emerald-600 tracking-tighter">${{ (bill.count * bill.value).toFixed(0) }}</span>
                </div>
             </div>
           </div>
 
           <!-- Coins -->
-          <div class="space-y-3">
-            <h4 class="text-xs font-semibold text-surface-400 uppercase mb-2">Coins</h4>
-            <div v-for="coin in coins" :key="coin.value" class="flex items-center gap-3">
-               <span class="w-10 text-sm font-medium text-surface-300 text-right">{{ coin.label }}</span>
-               <div class="flex-1 relative">
-                 <span class="absolute left-3 top-1.5 text-surface-600 text-xs">x</span>
-                 <input 
-                   v-model.number="coin.count" 
-                   type="number" 
-                   min="0"
-                   class="w-full bg-surface-800 border border-surface-700 rounded px-3 py-2 pl-6 text-base text-white focus:ring-1 focus:ring-primary-500/50 focus:border-primary-500"
-                 />
-               </div>
-               <div class="w-24 text-right text-xs font-mono text-surface-400">
-                 <span v-if="coin.count > 0">{{ coin.value.toFixed(2) }} × {{ coin.count }} = </span>
-                 <span class="text-white font-medium">${{ (coin.count * coin.value).toFixed(2) }}</span>
-               </div>
-            </div>
+          <div class="space-y-4">
+             <h4 class="text-[11px] font-black text-slate-900 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Coinage / Rolls</h4>
+             <div v-for="coin in coins" :key="coin.value" class="flex items-center gap-4 group">
+                <span class="w-12 text-sm font-black text-slate-400 text-right italic">{{ coin.label }}</span>
+                <div class="flex-1 relative">
+                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 font-bold text-xs uppercase pointer-events-none">qty</span>
+                  <input 
+                    v-model.number="coin.count" 
+                    type="number" 
+                    min="0"
+                    class="no-spinner w-full h-14 bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 pl-12 text-lg font-black text-slate-900 focus:bg-white focus:border-primary-500 transition-all outline-none"
+                    placeholder="0"
+                  />
+                </div>
+                <div class="w-28 text-right">
+                  <span class="text-lg font-black font-mono text-emerald-600 tracking-tighter">${{ (coin.count * coin.value).toFixed(2) }}</span>
+                </div>
+             </div>
           </div>
        </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Remove number spinners */
+.no-spinner::-webkit-inner-spin-button,
+.no-spinner::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+.no-spinner {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.font-mono {
+    font-family: 'JetBrains Mono', monospace;
+}
+</style>

@@ -16,6 +16,8 @@ const isUploading = ref(false);
 const isSubmitting = ref(false);
 const statusMessage = ref<{ type: 'success' | 'error', text: string } | null>(null);
 
+// Entries handled here
+
 const getLatestLogBefore = (date: string) => {
     return fuelStore.logs
         .filter(l => l.date < date)
@@ -27,7 +29,7 @@ const initializeEntries = () => {
     const existingLog = fuelStore.logs.find(l => l.date === selectedDate.value);
     
     if (existingLog) {
-        entries.value = JSON.parse(JSON.stringify(existingLog.entries)); // Deep copy to edit
+        entries.value = JSON.parse(JSON.stringify(existingLog.entries)); 
         notes.value = existingLog.notes || '';
         atgImageUrl.value = existingLog.atgImage || '';
     } else {
@@ -50,6 +52,7 @@ const initializeEntries = () => {
                 variance: -beginGal
             };
         });
+
         notes.value = '';
         atgImageUrl.value = '';
     }
@@ -191,33 +194,33 @@ const saveLog = async () => {
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-4">
-        <div class="bg-primary-500/20 p-3 rounded-lg">
-           <Droplet class="w-6 h-6 text-primary-400" />
+        <div class="bg-primary-50 p-3 rounded-lg shadow-lg shadow-primary-500/10">
+           <Droplet class="w-6 h-6 text-primary-600" />
         </div>
         <div>
-           <h2 class="text-2xl font-bold font-display text-white">Fuel Inventory Log</h2>
-           <p class="text-surface-400 text-sm">Track stick readings, deliveries, and variances daily.</p>
+           <h2 class="text-2xl font-bold font-display text-slate-900">Fuel Inventory Log</h2>
+           <p class="text-slate-500 text-sm">Track stick readings, deliveries, and variances daily.</p>
         </div>
       </div>
     </div>
 
     <!-- Date Navigation -->
     <div class="glass-panel p-4 flex items-center justify-between">
-      <button @click="navigateDate(-1)" class="p-2 hover:bg-surface-800 rounded-lg text-surface-400 hover:text-white transition-colors"><ChevronLeft /></button>
+      <button @click="navigateDate(-1)" class="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition-colors"><ChevronLeft /></button>
       <div class="flex flex-col items-center">
-         <span class="text-xs text-surface-400 uppercase tracking-wider font-bold">Log Date</span>
+         <span class="text-xs text-slate-400 uppercase tracking-wider font-bold">Log Date</span>
          <div class="flex items-center gap-2">
-            <input type="date" v-model="selectedDate" class="bg-transparent border-none text-white font-bold text-lg text-center focus:ring-0 cursor-pointer" />
-            <button @click="refreshData" title="Refresh logs from server" class="text-surface-500 hover:text-primary-400 transition-colors">
+            <input type="date" v-model="selectedDate" class="bg-transparent border-none text-slate-900 font-bold text-lg text-center focus:ring-0 cursor-pointer" />
+            <button @click="refreshData" title="Refresh logs from server" class="text-slate-400 hover:text-primary-600 transition-colors">
                 <Clock class="w-4 h-4" />
             </button>
          </div>
       </div>
-      <button @click="navigateDate(1)" class="p-2 hover:bg-surface-800 rounded-lg text-surface-400 hover:text-white transition-colors"><ChevronRight /></button>
+      <button @click="navigateDate(1)" class="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition-colors"><ChevronRight /></button>
     </div>
 
     <!-- Sync Warning Banner -->
-    <div v-if="hasSyncMismatch" class="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 flex items-center justify-between text-amber-500 animate-in fade-in slide-in-from-top-2">
+    <div v-if="hasSyncMismatch" class="bg-amber-50 border border-amber-100 rounded-lg p-4 flex items-center justify-between text-amber-700 animate-in fade-in slide-in-from-top-2">
        <div class="flex items-center gap-3">
            <AlertCircle class="w-5 h-5" />
            <div>
@@ -225,7 +228,7 @@ const saveLog = async () => {
                <p class="text-xs opacity-80">Beginning Inventory does not match the previous day's Ending Inventory.</p>
            </div>
        </div>
-       <button @click="syncWithPrevious" class="bg-amber-500/20 hover:bg-amber-500/30 text-amber-500 px-3 py-1.5 rounded-md text-xs font-bold transition-colors flex items-center gap-2">
+       <button @click="syncWithPrevious" class="bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 rounded-md text-xs font-bold transition-colors flex items-center gap-2">
            <History class="w-3.5 h-3.5" />
            Sync with Previous Day
        </button>
@@ -235,37 +238,37 @@ const saveLog = async () => {
     <div class="glass-panel overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-sm text-left">
-                <thead class="bg-surface-800/50 text-xs text-surface-400 uppercase tracking-wider">
+                <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider">
                     <tr>
                         <th class="px-4 py-3 min-w-[150px]">Fuel Type</th>
                         <th class="px-4 py-3 min-w-[110px]">Inch (Stick)</th>
                         <th class="px-4 py-3 min-w-[130px]">
                             <div class="flex items-center gap-2">
                                 Begin Gal
-                                <button @click="syncWithPrevious" title="Sync with previous day" class="text-primary-400 hover:text-primary-300 transition-colors">
+                                <button @click="syncWithPrevious" title="Sync with previous day" class="text-primary-600 hover:text-primary-700 transition-colors">
                                     <History class="w-3.5 h-3.5" />
                                 </button>
                             </div>
                         </th>
                         <th class="px-4 py-3 min-w-[130px]">Delivery Gal</th>
                         <th class="px-4 py-3 min-w-[130px]">Sold Gal</th>
-                        <th class="px-4 py-3 min-w-[130px] bg-surface-800/80 text-center">Book Inv</th>
+                        <th class="px-4 py-3 min-w-[130px] bg-slate-100/50 text-center">Book Inv</th>
                         <th class="px-4 py-3 min-w-[130px]">End Inv (ATG)</th>
                         <th class="px-4 py-3 min-w-[130px]">Cost/Gal</th>
                         <th class="px-4 py-3 min-w-[110px] text-right">Variance</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-surface-700/50 whitespace-nowrap">
-                    <tr v-for="entry in entries" :key="entry.type" class="hover:bg-surface-800/30">
-                        <td class="px-4 py-3 font-medium text-white">{{ entry.type }}</td>
+                <tbody class="divide-y divide-slate-100 whitespace-nowrap">
+                    <tr v-for="entry in entries" :key="entry.type" class="hover:bg-slate-50 transition-colors">
+                        <td class="px-4 py-3 font-medium text-slate-900">{{ entry.type }}</td>
                         <td class="px-2 py-2"><input type="number" v-model.number="entry.inch" class="input-table" placeholder="0" /></td>
                         <td class="px-2 py-2"><input type="number" v-model.number="entry.beginGal" @input="calculateRow(entry)" class="input-table" placeholder="0" /></td>
                         <td class="px-2 py-2"><input type="number" v-model.number="entry.deliveryGal" @input="calculateRow(entry)" class="input-table" placeholder="0" /></td>
                         <td class="px-2 py-2"><input type="number" v-model.number="entry.soldGal" @input="calculateRow(entry)" class="input-table" placeholder="0" /></td>
-                        <td class="px-4 py-3 font-mono text-surface-300 bg-surface-800/30">{{ entry.bookInv }}</td>
+                        <td class="px-4 py-3 font-mono text-slate-500 bg-slate-100/50">{{ entry.bookInv }}</td>
                         <td class="px-2 py-2"><input type="number" v-model.number="entry.endInvAtg" @input="calculateRow(entry)" class="input-table" placeholder="0" /></td>
                          <td class="px-2 py-2"><input type="number" v-model.number="entry.costPerGal" step="0.001" class="input-table" placeholder="0.00" /></td>
-                        <td class="px-4 py-3 text-right font-mono font-bold" :class="entry.variance < 0 ? 'text-red-400' : 'text-emerald-400'">
+                        <td class="px-4 py-3 text-right font-mono font-bold" :class="entry.variance < 0 ? 'text-red-600' : 'text-emerald-600'">
                             {{ entry.variance }}
                         </td>
                     </tr>
@@ -278,25 +281,25 @@ const saveLog = async () => {
     <div class="glass-panel p-6">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
              <div class="space-y-2">
-                 <label class="text-xs text-surface-400 uppercase tracking-wide">Notes</label>
+                 <label class="text-xs text-slate-500 uppercase tracking-wide">Notes</label>
                  <textarea v-model="notes" class="input-field w-full h-24" placeholder="Tank maintenance, leakage check..."></textarea>
              </div>
              
              <div class="space-y-2">
-                 <label class="text-xs text-surface-400 uppercase tracking-wide">ATG Scan Copy</label>
+                 <label class="text-xs text-slate-500 uppercase tracking-wide">ATG Scan Copy</label>
                  <div class="flex gap-4 items-start">
                      <!-- File Input -->
-                     <label class="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-surface-700 rounded-lg cursor-pointer hover:bg-surface-800/50 hover:border-surface-600 transition-colors relative space-y-1">
-                         <div class="flex flex-col items-center justify-center pt-5 pb-6 text-surface-400">
+                     <label class="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 hover:border-slate-300 transition-colors relative space-y-1">
+                         <div class="flex flex-col items-center justify-center pt-5 pb-6 text-slate-400">
                              <Paperclip v-if="!atgImageFile" class="w-6 h-6 mb-1" />
                              <span v-if="!atgImageFile" class="text-xs">Attach File</span>
-                             <span v-else class="text-xs font-medium text-white px-2 text-center break-all">{{ atgImageFile.name }}</span>
+                             <span v-else class="text-xs font-medium text-slate-900 px-2 text-center break-all">{{ atgImageFile.name }}</span>
                          </div>
                          <input type="file" class="hidden" @change="handleFileSelect" accept="image/*,.pdf" />
                      </label>
 
                      <!-- Existing Image Preview -->
-                     <div v-if="atgImageUrl" class="relative group w-24 h-24 flex-shrink-0 bg-surface-900 rounded-lg overflow-hidden border border-surface-700">
+                     <div v-if="atgImageUrl" class="relative group w-24 h-24 flex-shrink-0 bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
                          <img :src="atgImageUrl" alt="ATG Scan" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
                          <a :href="atgImageUrl" target="_blank" class="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
                              <ExternalLink class="w-5 h-5 text-white" />
@@ -306,11 +309,11 @@ const saveLog = async () => {
              </div>
         </div>
         
-        <div class="flex items-center justify-between border-t border-surface-700 pt-6">
+        <div class="flex items-center justify-between border-t border-slate-100 pt-6">
             <div class="flex items-center gap-6"> 
                  <div>
-                    <div class="text-xs text-surface-400 uppercase tracking-wide">Total Variance</div>
-                    <div class="text-2xl font-mono font-bold" :class="totalVariance < 0 ? 'text-red-400' : 'text-emerald-400'">
+                    <div class="text-xs text-slate-500 uppercase tracking-wide">Total Variance</div>
+                    <div class="text-2xl font-mono font-bold" :class="totalVariance < 0 ? 'text-red-600' : 'text-emerald-600'">
                         {{ totalVariance }}
                     </div>
                  </div>
@@ -331,16 +334,16 @@ const saveLog = async () => {
     </div>
 
     <!-- Recent Logs Section -->
-    <div class="glass-panel overflow-hidden mt-12">
-        <div class="px-6 py-4 border-b border-surface-700/50">
-            <h3 class="text-lg font-bold text-white uppercase tracking-wider text-sm flex items-center gap-2">
-                <History class="w-4 h-4 text-primary-400" />
+    <div class="glass-panel overflow-hidden mt-12 shadow-sm">
+        <div class="px-6 py-4 border-b border-slate-100">
+            <h3 class="text-lg font-bold text-slate-900 uppercase tracking-wider text-sm flex items-center gap-2">
+                <History class="w-4 h-4 text-primary-600" />
                 Recent Logs Activity
             </h3>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm text-left">
-                <thead class="bg-surface-800/50 text-xs text-surface-400 uppercase tracking-widest">
+                <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-widest">
                     <tr>
                         <th class="px-6 py-3 font-bold">Date</th>
                         <th class="px-6 py-3 font-bold">Total Variance</th>
@@ -349,26 +352,26 @@ const saveLog = async () => {
                         <th class="px-6 py-3 text-right font-bold">Action</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-surface-700/50">
+                <tbody class="divide-y divide-slate-100">
                     <tr v-for="log in fuelStore.logs.slice(0, 10)" :key="log.date" 
-                        class="hover:bg-primary-500/5 cursor-pointer transition-colors group" 
+                        class="hover:bg-primary-50 cursor-pointer transition-colors group" 
                         @click="selectedDate = log.date">
-                        <td class="px-6 py-4 font-medium" :class="selectedDate === log.date ? 'text-primary-400 font-bold' : 'text-surface-200'">
+                        <td class="px-6 py-4 font-medium" :class="selectedDate === log.date ? 'text-primary-600 font-bold' : 'text-slate-700'">
                             {{ log.date }}
-                            <span v-if="selectedDate === log.date" class="ml-2 text-[10px] bg-primary-500/20 text-primary-500 border border-primary-500/20 px-1.5 py-0.5 rounded-full">ACTIVE</span>
+                            <span v-if="selectedDate === log.date" class="ml-2 text-[10px] bg-primary-100 text-primary-700 border border-primary-200 px-1.5 py-0.5 rounded-full">ACTIVE</span>
                         </td>
-                        <td class="px-6 py-4 font-mono font-bold" :class="log.totalVariance < 0 ? 'text-red-400' : 'text-emerald-400'">
+                        <td class="px-6 py-4 font-mono font-bold" :class="log.totalVariance < 0 ? 'text-red-600' : 'text-emerald-600'">
                             {{ log.totalVariance }}
                         </td>
-                        <td class="px-6 py-4 text-surface-400 truncate max-w-[200px] italic">{{ log.notes || 'No notes' }}</td>
+                        <td class="px-6 py-4 text-slate-500 truncate max-w-[200px] italic">{{ log.notes || 'No notes' }}</td>
                         <td class="px-6 py-4 text-center">
-                            <div v-if="log.atgImage" class="bg-primary-500/10 w-8 h-8 rounded-full flex items-center justify-center mx-auto group-hover:bg-primary-500/20 transition-colors">
-                                <Paperclip class="w-4 h-4 text-primary-400" />
+                            <div v-if="log.atgImage" class="bg-primary-50 w-8 h-8 rounded-full flex items-center justify-center mx-auto group-hover:bg-primary-100 transition-colors">
+                                <Paperclip class="w-4 h-4 text-primary-600" />
                             </div>
-                            <span v-else class="text-surface-700">-</span>
+                            <span v-else class="text-slate-200">-</span>
                         </td>
                         <td class="px-6 py-4 text-right">
-                            <button class="text-surface-500 group-hover:text-primary-400 transition-colors">
+                            <button class="text-slate-300 group-hover:text-primary-600 transition-colors">
                                 <ChevronRight class="w-5 h-5" />
                             </button>
                         </td>
@@ -390,6 +393,6 @@ const saveLog = async () => {
 
 <style scoped>
 .input-table {
-    @apply w-full bg-surface-900/50 border border-surface-700/50 rounded px-2 py-1.5 text-sm text-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-right;
+    @apply w-full bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm text-slate-900 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-right transition-all;
 }
 </style>

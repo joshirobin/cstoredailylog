@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { useSalesStore, type DenominationCounts, type Check } from '../../stores/sales';
+import { useSalesStore, type DenominationCounts, type Check, type SalesLog } from '../../stores/sales';
 import { 
   Save, AlertCircle, History as HistoryIcon, 
   Plus, Trash2, Vault, DollarSign, Calendar, 
   Edit3, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
   TrendingUp, Wallet, Receipt,
   Sparkles, Clock, Calculator, Loader2,
-  Paperclip, FileText
+  Paperclip, FileText, CheckCircle2
 } from 'lucide-vue-next';
 import CashDenominations from '../../components/CashDenominations.vue';
 import { storage } from '../../firebaseConfig';
@@ -44,8 +44,7 @@ const otherUrl = ref('');
 const otherFile = ref<File | null>(null);
 
 // UI Expansion State
-const isOpeningExpanded = ref(false);
-const isClosingExpanded = ref(false);
+const activeAuditType = ref<'opening' | 'closing' | 'safe' | null>(null);
 const isSafeExpanded = ref(false);
 
 // Date Navigation for Logic
@@ -73,7 +72,7 @@ const checkExistingLog = () => {
        
        if (prevLog && prevLog.closingCash !== undefined) {
            openingCash.value = prevLog.closingCash;
-           openingDetails.value = JSON.parse(JSON.stringify(prevLog.closingDenominations || { bills: [], coins: [] }));
+           openingDetails.value = JSON.parse(JSON.stringify(prevLog.closingDenominations || { bills: {}, coins: {} }));
             notificationStore.info(`Carried over $${prevLog.closingCash.toFixed(2)} from ${prevLog.date}`, "Data Sync");
         }
 
@@ -149,216 +148,201 @@ const toggleLogExpansion = (logId: string) => {
   }
 };
 
-const loadLogForEditing = (log: any) => {
-  editingLogId.value = log.id;
-  openingCash.value = log.openingCash;
-  openingDetails.value = log.openingDenominations;
-  closingCash.value = log.closingCash;
-  closingDetails.value = log.closingDenominations;
-  expenses.value = log.expenses;
-  notes.value = log.notes || '';
-  safeCash.value = log.safeCash || 0;
-  safeDetails.value = log.safeCashDetails;
-  checks.value = log.checks || [];
-  lottoUrl.value = log.lottoReport || '';
-  otherUrl.value = log.otherReport || '';
-  lottoFile.value = null;
-  otherFile.value = null;
-
-  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+const loadLogForEditing = (log: SalesLog) => {
+    editingLogId.value = log.id;
+    selectedDate.value = log.date;
+    openingCash.value = log.openingCash;
+    closingCash.value = log.closingCash;
+    openingDetails.value = log.openingDenominations;
+    closingDetails.value = log.closingDenominations;
+    safeCash.value = log.safeCash || 0;
+    safeDetails.value = log.safeCashDetails;
+    checks.value = log.checks || [];
+    expenses.value = log.expenses || 0;
+    notes.value = log.notes || '';
+    lottoUrl.value = log.lottoUrl || '';
+    otherUrl.value = log.otherUrl || '';
 };
 
 const cancelEdit = () => {
-  editingLogId.value = null;
-  resetForm();
+    editingLogId.value = null;
+    resetForm();
 };
 
 const resetForm = () => {
-  openingCash.value = 0;
-  closingCash.value = 0;
-  openingDetails.value = undefined;
-  closingDetails.value = undefined;
-  safeCash.value = 0;
-  safeDetails.value = undefined;
-  checks.value = [];
-  expenses.value = 0;
-  notes.value = '';
-  lottoUrl.value = '';
-  otherUrl.value = '';
-  lottoFile.value = null;
-  otherFile.value = null;
+    openingCash.value = 0;
+    closingCash.value = 0;
+    openingDetails.value = undefined;
+    closingDetails.value = undefined;
+    safeCash.value = 0;
+    safeDetails.value = undefined;
+    checks.value = [];
+    expenses.value = 0;
+    notes.value = '';
+    lottoUrl.value = '';
+    otherUrl.value = '';
+    lottoFile.value = null;
+    otherFile.value = null;
 };
 
-const confirmDelete = (logId: string) => {
-  deleteConfirmLogId.value = logId;
+const handleLottoFile = (e: any) => {
+    lottoFile.value = e.target.files[0];
+};
+
+const handleOtherFile = (e: any) => {
+    otherFile.value = e.target.files[0];
+};
+
+const saveDailyLog = async () => {
+  isSubmitting.value = true;
+  try {
+     let currentLottoUrl = lottoUrl.value;
+     let currentOtherUrl = otherUrl.value;
+
+     if (lottoFile.value) {
+        isUploading.value = true;
+        const sRef = storageRef(storage, `sales_reports/${selectedDate.value}_lotto_${lottoFile.value.name}`);
+        await uploadBytes(sRef, lottoFile.value);
+        currentLottoUrl = await getDownloadURL(sRef);
+     }
+
+     if (otherFile.value) {
+        isUploading.value = true;
+        const sRef = storageRef(storage, `sales_reports/${selectedDate.value}_global_${otherFile.value.name}`);
+        await uploadBytes(sRef, otherFile.value);
+        currentOtherUrl = await getDownloadURL(sRef);
+     }
+
+     const logData: Omit<SalesLog, 'id' | 'locationId'> = {
+        date: selectedDate.value,
+        openingCash: openingCash.value,
+        openingDenominations: openingDetails.value,
+        closingCash: closingCash.value,
+        closingDenominations: closingDetails.value,
+        safeCash: safeCash.value,
+        safeCashDetails: safeDetails.value,
+        checks: checks.value,
+        safeTotal: safeTotal.value,
+        expenses: expenses.value,
+        totalSales: dailySales.value,
+        notes: notes.value,
+        lottoUrl: currentLottoUrl,
+        otherUrl: currentOtherUrl,
+        status: 'PENDING_REVIEW',
+        submittedBy: 'Manager' 
+     };
+
+     if (editingLogId.value) {
+        await salesStore.updateLog(editingLogId.value, logData);
+        notificationStore.success('Daily activity record updated', 'Success');
+     } else {
+        await salesStore.addLog(logData);
+        notificationStore.success('New daily log committed to archives', 'Success');
+     }
+     
+     resetForm();
+     editingLogId.value = null;
+  } catch (error) {
+     console.error(error);
+     notificationStore.error('System failure while saving log', 'Error');
+  } finally {
+     isSubmitting.value = false;
+     isUploading.value = false;
+  }
+};
+
+const confirmDelete = (id: string) => {
+    deleteConfirmLogId.value = id;
 };
 
 const cancelDelete = () => {
-  deleteConfirmLogId.value = null;
-};
-
-const deleteLog = () => {
-  if (deleteConfirmLogId.value) {
-    salesStore.deleteLog(deleteConfirmLogId.value);
     deleteConfirmLogId.value = null;
-    notificationStore.success('Log deleted successfully!', 'Archived');
-  }
 };
 
-const handleLottoFile = (event: Event) => {
-    const target = event.target as HTMLInputElement;
-    if (target.files && target.files[0]) lottoFile.value = target.files[0];
+const deleteLog = async () => {
+    if (!deleteConfirmLogId.value) return;
+    try {
+        await salesStore.deleteLog(deleteConfirmLogId.value);
+        notificationStore.success('Record purged from archives', 'Purge Complete');
+        if (editingLogId.value === deleteConfirmLogId.value) {
+            cancelEdit();
+        }
+    } catch (e) {
+        notificationStore.error('Delete failed', 'Error');
+    } finally {
+        deleteConfirmLogId.value = null;
+    }
 };
 
-const handleOtherFile = (event: Event) => {
-    const target = event.target as HTMLInputElement;
-    if (target.files && target.files[0]) otherFile.value = target.files[0];
-};
-
-const addCheck = () => {
-  checks.value.push({ number: '', amount: 0 });
-};
-
-const removeCheck = (index: number) => {
-  checks.value.splice(index, 1);
+const verifyLog = async (id: string) => {
+    try {
+        await salesStore.updateLogStatus(id, 'VERIFIED');
+        notificationStore.success('Log verified and frozen', 'Security');
+    } catch (e) {
+        notificationStore.error('Verification failed', 'Error');
+    }
 };
 
 const totalSalesThisWeek = computed(() => {
-  const lastWeek = new Date();
-  lastWeek.setDate(lastWeek.getDate() - 7);
-  return salesStore.logs
-    .filter(l => new Date(l.date) >= lastWeek)
-    .reduce((sum, l) => sum + (l.totalSales || 0), 0);
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return salesStore.logs
+        .filter((l: SalesLog) => new Date(l.date) >= weekAgo)
+        .reduce((sum: number, l: SalesLog) => sum + (l.totalSales || 0), 0);
 });
 
 const totalSalesThisMonth = computed(() => {
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  return salesStore.logs
-    .filter(l => new Date(l.date) >= startOfMonth)
-    .reduce((sum, l) => sum + (l.totalSales || 0), 0);
+    const monthAgo = new Date();
+    monthAgo.setDate(monthAgo.getDate() - 30);
+    return salesStore.logs
+        .filter((l: SalesLog) => new Date(l.date) >= monthAgo)
+        .reduce((sum: number, l: SalesLog) => sum + (l.totalSales || 0), 0);
 });
 
-const saveDailyLog = async () => {
-  if (openingCash.value === 0 && closingCash.value === 0) {
-    notificationStore.error('Please enter details for Opening and Closing cash.', 'Validation Error');
-    return;
-  }
+const addCheck = () => checks.value.push({ number: '', amount: 0 });
+const removeCheck = (idx: number) => checks.value.splice(idx, 1);
 
-  isSubmitting.value = true;
-
-  try {
-    let finalLottoUrl = lottoUrl.value;
-    let finalOtherUrl = otherUrl.value;
-
-    if (lottoFile.value || otherFile.value) {
-        isUploading.value = true;
-        
-        if (lottoFile.value) {
-            const fileRef = storageRef(storage, `sales_reports/${selectedDate.value}/lotto-${lottoFile.value.name}-${Date.now()}`);
-            await uploadBytes(fileRef, lottoFile.value);
-            finalLottoUrl = await getDownloadURL(fileRef);
-        }
-        
-        if (otherFile.value) {
-            const fileRef = storageRef(storage, `sales_reports/${selectedDate.value}/other-${otherFile.value.name}-${Date.now()}`);
-            await uploadBytes(fileRef, otherFile.value);
-            finalOtherUrl = await getDownloadURL(fileRef);
-        }
-        isUploading.value = false;
-    }
-
-    const logData = {
-        date: selectedDate.value,
-        openingCash: Number(openingCash.value) || 0,
-        openingDenominations: openingDetails.value,
-        closingCash: Number(closingCash.value) || 0,
-        closingDenominations: closingDetails.value,
-        expenses: Number(expenses.value) || 0,
-        totalSales: Number(dailySales.value) || 0,
-        notes: notes.value || '',
-        safeCash: Number(safeCash.value) || 0,
-        safeCashDetails: safeDetails.value,
-        checks: checks.value.length > 0 ? checks.value : undefined,
-        safeTotal: Number(safeTotal.value) || 0,
-        lottoReport: finalLottoUrl,
-        otherReport: finalOtherUrl
-    };
-
-    if (editingLogId.value) {
-      await salesStore.updateLog(editingLogId.value, logData);
-      notificationStore.success('Daily sales log updated successfully!', 'Saved');
-      editingLogId.value = null;
-    } else {
-      await salesStore.addLog(logData);
-      notificationStore.success('Daily sales log saved successfully!', 'Success');
-    }
-    
-    resetForm();
-    
-  } catch (error) {
-    console.error("Error saving sales log: ", error);
-    notificationStore.error('Failed to save log. Please try again.', 'System Error');
-  } finally {
-    isSubmitting.value = false;
-    isUploading.value = false;
-  }
-};
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto space-y-10 pb-20">
-    <!-- Premium Header & Quick Stats -->
-    <div class="space-y-8">
-      <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div class="space-y-2">
-          <div class="flex items-center gap-2 px-3 py-1 bg-primary-500/10 border border-primary-500/20 rounded-full w-fit">
-            <Sparkles class="w-3.5 h-3.5 text-primary-400" />
-            <span class="text-[10px] uppercase tracking-widest font-bold text-primary-400">Financial Suite</span>
-          </div>
-          <h2 class="text-4xl font-extrabold font-display text-white tracking-tight">Daily <span class="text-primary-400">Sales</span></h2>
-          <p class="text-surface-400 text-base max-w-md">Precision tracking for your shift operations, denominations, and safe deposits.</p>
+  <div class="h-full bg-slate-50 flex flex-col -m-6 p-6 space-y-8 overflow-y-auto custom-scrollbar">
+    
+    <!-- Hero Header -->
+    <div class="space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-black text-slate-900 uppercase italic tracking-tighter">Daily Sales Registry</h1>
+          <p class="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Global activity & financial audit terminal</p>
         </div>
-
-        <!-- Hero Sales Widget -->
-        <div class="glass-card p-1 pr-6 flex items-center gap-6 group hover:border-emerald-500/30 transition-all duration-500">
-          <div class="bg-gradient-to-br from-emerald-500 to-teal-600 p-5 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.3)] group-hover:scale-105 transition-transform">
-            <TrendingUp class="w-8 h-8 text-white" />
+        
+        <div class="flex items-center gap-4">
+          <div class="stats-card bg-white border border-slate-100">
+            <div class="stats-icon border border-slate-100 text-blue-500 bg-white"><Wallet class="w-5 h-5" /></div>
+            <div>
+              <p class="stats-label">Net Sales (7D)</p>
+              <p class="stats-value text-slate-900">${{ totalSalesThisWeek.toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</p>
+            </div>
           </div>
-          <div>
-            <div class="text-[10px] text-surface-400 uppercase tracking-[0.2em] font-bold mb-1">Today's Performance</div>
-            <div class="text-3xl font-black font-mono tracking-tighter" :class="dailySales >= 0 ? 'text-emerald-400' : 'text-rose-400'">
-              ${{ dailySales.toFixed(2) }}
+          <div class="stats-card bg-white border border-slate-100">
+            <div class="stats-icon border border-slate-100 text-purple-500 bg-white"><TrendingUp class="w-5 h-5" /></div>
+            <div>
+              <p class="stats-label">Net Sales (Month)</p>
+              <p class="stats-value text-slate-900">${{ totalSalesThisMonth.toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</p>
+            </div>
+          </div>
+          <div class="stats-card bg-white border border-slate-100">
+            <div class="stats-icon border border-slate-100 text-amber-500 bg-white"><HistoryIcon class="w-5 h-5" /></div>
+            <div>
+              <p class="stats-label">Active Logs</p>
+              <p class="stats-value text-slate-900">{{ salesStore.logs.length }} records</p>
             </div>
           </div>
         </div>
+
       </div>
 
-      <!-- Quick Stats Grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div class="stats-card bg-surface-800/20">
-          <div class="stats-icon bg-blue-500/10 text-blue-400"><Wallet class="w-5 h-5" /></div>
-          <div>
-            <p class="stats-label">Net Sales (7D)</p>
-            <p class="stats-value">${{ totalSalesThisWeek.toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</p>
-          </div>
-        </div>
-        <div class="stats-card bg-surface-800/20">
-          <div class="stats-icon bg-purple-500/10 text-purple-400"><TrendingUp class="w-5 h-5" /></div>
-          <div>
-            <p class="stats-label">Net Sales (Month)</p>
-            <p class="stats-value">${{ totalSalesThisMonth.toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</p>
-          </div>
-        </div>
-        <div class="stats-card bg-surface-800/20">
-          <div class="stats-icon bg-amber-500/10 text-amber-400"><HistoryIcon class="w-5 h-5" /></div>
-          <div>
-            <p class="stats-label">Active Logs</p>
-            <p class="stats-value">{{ salesStore.logs.length }} records</p>
-          </div>
-        </div>
-      </div>
     </div>
+
 
     <!-- Layout Container -->
     <div class="grid grid-cols-1 xl:grid-cols-12 gap-10 items-start">
@@ -366,188 +350,201 @@ const saveDailyLog = async () => {
       <!-- Primary Entry Form (Left / Main) -->
       <div class="xl:col-span-8 space-y-8">
         <!-- Date Selector Card -->
-        <div class="glass-panel p-6 flex flex-col sm:flex-row items-center justify-between gap-6 border-t-2 border-t-primary-500">
+        <div class="bg-white border border-slate-100 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 border-t-4 border-t-primary-500 shadow-sm">
           <div class="flex items-center gap-4">
-            <div class="p-3 bg-primary-500/10 rounded-xl">
-              <Calendar class="w-6 h-6 text-primary-400" />
+            <div class="p-3 bg-slate-50 rounded-2xl">
+              <Calendar class="w-6 h-6 text-slate-400" />
             </div>
             <div>
-              <h3 class="text-white font-bold text-lg leading-tight">{{ editingLogId ? 'Modify Record' : 'Create New Log' }}</h3>
-              <p class="text-surface-500 text-xs">Processing for: <span class="text-primary-400 font-semibold">{{ selectedDate }}</span></p>
+              <h3 class="text-slate-900 font-black text-lg leading-tight uppercase italic">{{ editingLogId ? 'Modify Record' : 'Create New Log' }}</h3>
+              <p class="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">Processing for: <span class="text-primary-600">{{ selectedDate }}</span></p>
             </div>
           </div>
 
-          <div class="flex items-center bg-surface-900/50 p-1.5 rounded-xl border border-surface-700/50 group focus-within:border-primary-500/50 transition-colors">
-            <button @click="navigateDate(-1)" class="p-2.5 hover:bg-surface-800 rounded-lg text-surface-400 hover:text-white transition-all"><ChevronLeft class="w-5 h-5" /></button>
-            <input type="date" v-model="selectedDate" class="bg-transparent border-none text-white font-bold text-sm focus:ring-0 px-4 w-[160px] text-center" />
-            <button @click="navigateDate(1)" class="p-2.5 hover:bg-surface-800 rounded-lg text-surface-400 hover:text-white transition-all"><ChevronRight class="w-5 h-5" /></button>
+          <div class="flex items-center bg-slate-50 p-1.5 rounded-2xl border border-slate-100 group transition-colors">
+            <button @click="navigateDate(-1)" class="p-2.5 hover:bg-white hover:shadow-sm rounded-xl text-slate-400 hover:text-slate-900 transition-all"><ChevronLeft class="w-5 h-5" /></button>
+            <input type="date" v-model="selectedDate" class="bg-transparent border-none text-slate-900 font-black text-sm focus:ring-0 px-4 w-[160px] text-center" />
+            <button @click="navigateDate(1)" class="p-2.5 hover:bg-white hover:shadow-sm rounded-xl text-slate-400 hover:text-slate-900 transition-all"><ChevronRight class="w-5 h-5" /></button>
           </div>
         </div>
+
 
         <!-- Input Sections -->
         <div class="space-y-8">
           <!-- Section 1: Cash Operations -->
           <div class="section-card">
             <div class="section-header">
-              <div class="section-icon bg-emerald-500/10 text-emerald-400"><DollarSign class="w-5 h-5" /></div>
-              <h3 class="text-white font-bold text-lg">Register Balance</h3>
+              <div class="section-icon border border-slate-100 text-emerald-500 bg-white"><DollarSign class="w-5 h-5" /></div>
+              <h3 class="text-slate-900 font-black text-lg uppercase italic">Register Balance</h3>
             </div>
+
             
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
               <div class="space-y-4">
                 <div 
-                  class="flex items-center justify-between px-3 py-2.5 bg-surface-900/50 rounded-xl cursor-pointer hover:bg-surface-800 transition-all border border-transparent hover:border-surface-700"
-                  @click="isOpeningExpanded = !isOpeningExpanded"
+                  class="flex items-center justify-between px-4 py-4 bg-transparent rounded-2xl cursor-pointer hover:bg-slate-100/50 transition-all border-2 border-slate-100"
+                  @click="activeAuditType = 'opening'"
                 >
                    <div class="flex items-center gap-2">
-                     <span class="text-xs uppercase tracking-widest font-bold text-surface-400">Opening Cash</span>
-                     <component :is="isOpeningExpanded ? ChevronUp : ChevronDown" class="w-4 h-4 text-surface-500" />
+                     <span class="text-[10px] uppercase tracking-[0.2em] font-black text-slate-400">Opening Balance Audit</span>
+                     <Plus class="w-4 h-4 text-slate-400" />
                    </div>
-                   <span class="text-sm font-mono font-bold text-emerald-400">${{ openingCash.toFixed(2) }}</span>
-                </div>
-                <div v-if="isOpeningExpanded" class="animate-in fade-in slide-in-from-top-2 duration-300">
-                  <CashDenominations label="Morning Count" v-model="openingCash" @update:details="(d) => openingDetails = d" />
+                   <span class="text-base font-black text-emerald-600">${{ openingCash.toFixed(2) }}</span>
                 </div>
               </div>
               <div class="space-y-4">
                 <div 
-                  class="flex items-center justify-between px-3 py-2.5 bg-surface-900/50 rounded-xl cursor-pointer hover:bg-surface-800 transition-all border border-transparent hover:border-surface-700"
-                  @click="isClosingExpanded = !isClosingExpanded"
+                  class="flex items-center justify-between px-4 py-4 bg-transparent rounded-2xl cursor-pointer hover:bg-slate-100/50 transition-all border-2 border-slate-100"
+                  @click="activeAuditType = 'closing'"
                 >
                    <div class="flex items-center gap-2">
-                     <span class="text-xs uppercase tracking-widest font-bold text-surface-400">Closing Cash</span>
-                     <component :is="isClosingExpanded ? ChevronUp : ChevronDown" class="w-4 h-4 text-surface-500" />
+                     <span class="text-[10px] uppercase tracking-[0.2em] font-black text-slate-400">Closing Balance Audit</span>
+                     <Plus class="w-4 h-4 text-slate-400" />
                    </div>
-                   <span class="text-sm font-mono font-bold text-primary-400">${{ closingCash.toFixed(2) }}</span>
-                </div>
-                <div v-if="isClosingExpanded" class="animate-in fade-in slide-in-from-top-2 duration-300">
-                  <CashDenominations label="End of Shift" v-model="closingCash" @update:details="(d) => closingDetails = d" />
+                   <span class="text-base font-black text-primary-600">${{ closingCash.toFixed(2) }}</span>
                 </div>
               </div>
             </div>
           </div>
 
+
           <!-- Section 2: Safe & Checks -->
           <div class="section-card">
             <div 
-              class="section-header justify-between cursor-pointer hover:bg-surface-800/40 transition-colors"
+              class="section-header justify-between cursor-pointer hover:bg-slate-50 transition-colors"
               @click="isSafeExpanded = !isSafeExpanded"
             >
               <div class="flex items-center gap-4">
-                <div class="section-icon bg-amber-500/10 text-amber-400"><Vault class="w-5 h-5" /></div>
+                <div class="section-icon border border-slate-100 text-amber-500 bg-white"><Vault class="w-5 h-5" /></div>
                 <div class="flex items-center gap-2">
-                  <h3 class="text-white font-bold text-lg">Safe Deposit</h3>
-                  <component :is="isSafeExpanded ? ChevronUp : ChevronDown" class="w-4 h-4 text-surface-500" />
+                  <h3 class="text-slate-900 font-black text-lg uppercase italic">Safe Deposit</h3>
+                  <component :is="isSafeExpanded ? ChevronUp : ChevronDown" class="w-4 h-4 text-slate-400" />
                 </div>
               </div>
+
               <div class="text-right">
-                <span class="text-[10px] text-surface-500 uppercase font-bold block mb-0.5">Deposit Total</span>
-                <span class="text-lg font-mono font-bold text-amber-400">${{ safeTotal.toFixed(2) }}</span>
+                <span class="text-[10px] text-slate-400 uppercase font-black tracking-widest block mb-0.5">Deposit Total</span>
+                <span class="text-lg font-black text-amber-600">${{ safeTotal.toFixed(2) }}</span>
               </div>
             </div>
             
             <div v-if="isSafeExpanded" class="animate-in fade-in slide-in-from-top-2 duration-300">
-              <CashDenominations label="Deposit Pickup" v-model="safeCash" @update:details="(d) => safeDetails = d" />
+              <div class="p-6 pt-0 border-b border-slate-100 mb-6">
+                 <button 
+                  @click="activeAuditType = 'safe'"
+                  class="w-full flex items-center justify-between px-6 py-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all border border-slate-100 group"
+                 >
+                    <div class="flex items-center gap-3">
+                      <div class="p-2 bg-amber-500 text-white rounded-lg group-hover:scale-110 transition-transform"><Calculator class="w-4 h-4" /></div>
+                      <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Inventory Safe Cash</span>
+                    </div>
+                    <span class="text-sm font-black text-amber-600">${{ safeCash.toFixed(2) }}</span>
+                 </button>
+              </div>
               
-              <div class="bg-surface-900/40 rounded-2xl p-6 border border-surface-800">
+              <div class="bg-slate-50 rounded-2xl p-6 m-6 mt-0 border border-slate-100">
                 <div class="flex items-center justify-between mb-6">
                   <div class="flex items-center gap-3">
-                    <Receipt class="w-4 h-4 text-surface-400" />
-                    <h4 class="text-sm font-bold text-surface-200">Checks & Money Orders</h4>
+                    <Receipt class="w-4 h-4 text-slate-400" />
+                    <h4 class="text-[10px] font-black uppercase tracking-widest text-slate-500">Checks & Money Orders</h4>
                   </div>
-                  <button @click="addCheck" class="text-[10px] font-bold uppercase tracking-wider text-primary-400 hover:text-primary-300 flex items-center gap-2 transition-colors">
-                    <Plus class="w-3.5 h-3.5" /> Add New
+                  <button @click="addCheck" class="text-[10px] font-black uppercase tracking-widest text-primary-600 hover:text-primary-800 flex items-center gap-2 transition-colors">
+                    <Plus class="w-4 h-4" /> Add New
                   </button>
                 </div>
 
                 <div v-if="checks.length > 0" class="space-y-4">
                   <div v-for="(check, idx) in checks" :key="idx" class="flex items-center gap-4 animate-in slide-in-from-left-4 duration-300">
                     <div class="flex-1 relative group">
-                      <div class="absolute left-3 top-3 text-surface-600 group-focus-within:text-primary-400 transition-colors">#</div>
-                      <input v-model="check.number" type="text" placeholder="Check Number" class="modern-input pl-8" />
+                      <div class="absolute left-4 top-4 text-slate-300 group-focus-within:text-primary-500 transition-colors pointer-events-none">
+                         <span class="text-[10px] font-black uppercase">#</span>
+                      </div>
+                      <input v-model="check.number" type="text" placeholder="Check Number" class="modern-input pl-10 h-14" />
                     </div>
                     <div class="w-32 relative group">
-                      <div class="absolute left-3 top-3 text-surface-600 group-focus-within:text-emerald-400 transition-colors">$</div>
-                      <input v-model.number="check.amount" type="number" step="0.01" class="modern-input pl-8 text-right font-mono" />
+                      <div class="absolute left-4 top-4 text-slate-300 group-focus-within:text-emerald-500 transition-colors pointer-events-none">
+                         <span class="text-[10px] font-black">$</span>
+                      </div>
+                      <input v-model.number="check.amount" type="number" step="0.01" class="no-spinner modern-input pl-10 text-right h-14 font-black" />
                     </div>
-                    <button @click="removeCheck(idx)" class="p-3 text-surface-600 hover:text-rose-400 hover:bg-rose-400/10 rounded-xl transition-all"><Trash2 class="w-4.5 h-4.5" /></button>
+                    <button @click="removeCheck(idx)" class="p-4 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"><Trash2 class="w-5 h-5" /></button>
                   </div>
-                  <div class="pt-4 border-t border-surface-800 flex justify-between items-center text-xs font-bold uppercase tracking-widest text-surface-500">
+                  <div class="pt-4 border-t border-slate-100 flex justify-between items-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                     <span>Subtotal</span>
-                    <span class="text-white font-mono text-sm">${{ checksTotal.toFixed(2) }}</span>
+                    <span class="text-slate-900 text-sm">${{ checksTotal.toFixed(2) }}</span>
                   </div>
                 </div>
-                <div v-else class="text-center py-6 text-surface-600 text-xs italic">No checks recorded for this log</div>
+                <div v-else class="text-center py-6 text-slate-400 text-[10px] font-bold uppercase tracking-widest italic">No checks recorded for this log</div>
               </div>
             </div>
           </div>
 
+
           <!-- Section 3: Finalization -->
           <div class="section-card">
-            <div class="section-header"><div class="section-icon bg-rose-500/10 text-rose-400"><Calculator class="w-5 h-5" /></div><h3 class="text-white font-bold text-lg">Review & Save</h3></div>
+            <div class="section-header">
+                <div class="section-icon border border-slate-100 text-rose-500 bg-white"><Calculator class="w-5 h-5" /></div>
+                <h3 class="text-slate-900 font-black text-lg uppercase italic">Review & Save</h3>
+            </div>
+
             <div class="p-6 space-y-6">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="space-y-4">
-                  <label class="text-xs font-bold text-surface-400 uppercase tracking-widest">Shift Expenses / Payouts</label>
+                  <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Shift Expenses / Payouts</label>
                   <div class="relative group">
-                    <div class="absolute left-4 top-4 text-surface-600 group-focus-within:text-rose-400 transition-colors">$</div>
-                    <input v-model.number="expenses" type="number" step="0.01" class="modern-input pl-10 text-lg font-bold text-rose-400 bg-rose-500/5 placeholder-rose-500/20" placeholder="0.00" />
+                    <div class="absolute left-4 top-4 text-slate-300 group-focus-within:text-rose-500 transition-colors pointer-events-none">$</div>
+                    <input v-model.number="expenses" type="number" step="0.01" class="no-spinner modern-input pl-10 text-lg font-black text-rose-600 bg-rose-50/30 placeholder-rose-200" placeholder="0.00" />
                   </div>
 
                   <!-- Attachments Grid -->
                   <div class="grid grid-cols-2 gap-4 pt-2">
                     <!-- Lotto Report -->
                     <div class="space-y-2">
-                      <label class="text-[10px] font-bold text-surface-500 uppercase tracking-wider">Lotto Cash Report</label>
+                      <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Lotto Report</label>
                       <div class="flex items-center gap-2">
                          <label class="flex-1 cursor-pointer">
-                            <div class="flex items-center gap-2 px-3 py-2 bg-surface-900 border border-surface-800 rounded-xl hover:bg-surface-800 transition-colors group">
-                                <Paperclip class="w-3.5 h-3.5 text-surface-500 group-hover:text-primary-400" />
-                                <span class="text-[10px] text-surface-400 truncate">{{ lottoFile ? lottoFile.name : (lottoUrl ? 'Replace Report' : 'Attach Report') }}</span>
+                            <div class="flex items-center gap-2 px-3 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-white transition-all group">
+                                <Paperclip class="w-3.5 h-3.5 text-slate-400 group-hover:text-primary-500" />
+                                <span class="text-[9px] font-black text-slate-500 uppercase truncate">{{ lottoFile ? lottoFile.name : (lottoUrl ? 'Replace' : 'Attach') }}</span>
                             </div>
                             <input type="file" @change="handleLottoFile" class="hidden" accept="image/*,application/pdf" />
                          </label>
-                         <a v-if="lottoUrl" :href="lottoUrl" target="_blank" class="p-2 bg-primary-500/10 text-primary-400 rounded-xl hover:bg-primary-500/20 transition-colors">
-                            <ExternalLink class="w-3.5 h-3.5" />
-                         </a>
                       </div>
                     </div>
                     <!-- Other Report -->
                     <div class="space-y-2">
-                      <label class="text-[10px] font-bold text-surface-500 uppercase tracking-wider">Other Report</label>
+                      <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Global Report</label>
                       <div class="flex items-center gap-2">
                          <label class="flex-1 cursor-pointer">
-                            <div class="flex items-center gap-2 px-3 py-2 bg-surface-900 border border-surface-800 rounded-xl hover:bg-surface-800 transition-colors group">
-                                <FileText class="w-3.5 h-3.5 text-surface-500 group-hover:text-primary-400" />
-                                <span class="text-[10px] text-surface-400 truncate">{{ otherFile ? otherFile.name : (otherUrl ? 'Replace Report' : 'Attach Report') }}</span>
+                            <div class="flex items-center gap-2 px-3 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-white transition-all group">
+                                <FileText class="w-3.5 h-3.5 text-slate-400 group-hover:text-primary-500" />
+                                <span class="text-[9px] font-black text-slate-500 uppercase truncate">{{ otherFile ? otherFile.name : (otherUrl ? 'Replace' : 'Attach') }}</span>
                             </div>
                             <input type="file" @change="handleOtherFile" class="hidden" accept="image/*,application/pdf" />
                          </label>
-                         <a v-if="otherUrl" :href="otherUrl" target="_blank" class="p-2 bg-primary-500/10 text-primary-400 rounded-xl hover:bg-primary-500/20 transition-colors">
-                            <ExternalLink class="w-3.5 h-3.5" />
-                         </a>
                       </div>
                     </div>
                   </div>
                 </div>
-                <div class="space-y-3">
-                   <label class="text-xs font-bold text-surface-400 uppercase tracking-widest">Internal Notes</label>
-                   <textarea v-model="notes" class="modern-input min-h-[160px] py-4 leading-relaxed" placeholder="Record any shift discrepancies or important updates..."></textarea>
+                <div class="space-y-4">
+                   <label class="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] italic block mb-2">Detailed Reconciliation Notes</label>
+                   <textarea v-model="notes" class="w-full h-64 bg-slate-50 border-2 border-slate-100 rounded-3xl p-8 text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-primary-500 transition-all resize-none shadow-inner leading-relaxed" placeholder="Record shift discrepancies, maintenance issues, or important management updates here..."></textarea>
                 </div>
               </div>
 
-              <div class="flex items-center gap-4 pt-4 border-t border-surface-800">
-                <button v-if="editingLogId" @click="cancelEdit" class="px-6 py-4 rounded-2xl bg-surface-800 text-white font-bold hover:bg-surface-700 transition-all">Cancel</button>
+              <div class="flex items-center gap-4 pt-4 border-t border-slate-100">
+                <button v-if="editingLogId" @click="cancelEdit" class="px-8 py-4 rounded-[2rem] bg-slate-100 text-slate-500 font-extrabold uppercase italic tracking-tighter hover:bg-slate-200 transition-all">Cancel</button>
                 <button 
                   @click="saveDailyLog" 
                   :disabled="isSubmitting || isUploading"
-                  class="flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-primary-600 to-primary-500 text-white font-bold shadow-lg shadow-primary-500/20 hover:shadow-primary-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-50"
+                  class="flex-1 flex items-center justify-center gap-3 py-5 rounded-[2rem] bg-slate-900 text-white font-extrabold uppercase italic tracking-widest hover:bg-black hover:-translate-y-1 active:translate-y-0 transition-all disabled:opacity-50 shadow-2xl"
                 >
-                  <Save v-if="!isSubmitting && !isUploading" class="w-5 h-5" />
-                  <Loader2 v-else class="w-5 h-5 animate-spin" />
-                  <span>{{ isUploading ? 'Uploading Files...' : (isSubmitting ? 'Processing...' : (editingLogId ? 'Update Activity' : 'Commit Daily Log')) }}</span>
+                  <Save v-if="!isSubmitting && !isUploading" class="w-6 h-6" />
+                  <Loader2 v-else class="w-6 h-6 animate-spin" />
+                  <span class="text-xl tracking-tighter">{{ isUploading ? 'Uploading...' : (isSubmitting ? 'Saving...' : (editingLogId ? 'Update Activity' : 'Commit Daily Log')) }}</span>
                 </button>
               </div>
+
 
               <div class="h-4"></div>
             </div>
@@ -558,57 +555,87 @@ const saveDailyLog = async () => {
       <!-- Sidebar: Right (History) -->
       <div class="xl:col-span-4 space-y-6">
         <div class="sticky top-10 space-y-6">
-          <div class="glass-panel p-6 border-b-2 border-b-amber-500">
+          <div class="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm relative overflow-hidden">
              <div class="flex items-center justify-between mb-8">
                 <div class="flex items-center gap-3">
-                   <HistoryIcon class="w-5 h-5 text-amber-400" />
-                   <h3 class="text-lg font-bold text-white">Archives</h3>
+                   <div class="p-2.5 border border-slate-100 text-amber-500 bg-white rounded-xl">
+                      <HistoryIcon class="w-5 h-5" />
+                   </div>
+                   <h3 class="text-lg font-black text-slate-900 uppercase italic">Archives</h3>
                 </div>
-                <div class="bg-surface-800 px-3 py-1 rounded-full text-[10px] font-bold text-surface-400 tracking-tighter">{{ filteredLogs.length }} RECORDS</div>
+
+                <div class="bg-slate-100 px-3 py-1 rounded-full text-[10px] font-black text-slate-400 tracking-tighter">{{ filteredLogs.length }} RECORDS</div>
              </div>
 
              <!-- Mini Filter Tabs -->
              <div class="flex flex-wrap gap-2 mb-8">
                <button v-for="f in (['today', 'week', 'month'] as const)" :key="f"
                  @click="selectedFilter = f"
-                 class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all"
-                 :class="selectedFilter === f ? 'bg-amber-500 text-black' : 'bg-surface-800 text-surface-400 hover:text-white'"
+                 class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                 :class="selectedFilter === f ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-50 text-slate-400 hover:text-slate-900'"
                >{{ f }}</button>
-               <button @click="selectedFilter = 'all'" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all" :class="selectedFilter === 'all' ? 'bg-amber-500 text-black' : 'bg-surface-800 text-surface-400 hover:text-white'">All</button>
+               <button @click="selectedFilter = 'all'" class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all" :class="selectedFilter === 'all' ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-50 text-slate-400 hover:text-slate-900'">All</button>
              </div>
 
              <!-- Scrolled Logs List -->
              <div class="space-y-4 max-h-[800px] overflow-y-auto pr-2 custom-scrollbar">
                 <div v-for="log in filteredLogs" :key="log.id" 
-                  class="group relative bg-surface-900/40 hover:bg-surface-800/80 rounded-2xl border border-surface-800 hover:border-surface-600 transition-all duration-300 p-5 cursor-pointer"
-                  @click="toggleLogExpansion(log.id)"
+                   class="group relative bg-white hover:bg-slate-50 rounded-2xl border border-slate-100 hover:border-slate-300 transition-all duration-300 p-5 cursor-pointer shadow-sm"
+                   @click="toggleLogExpansion(log.id)"
                 >
                    <div class="flex items-center justify-between">
                       <div>
-                        <div class="text-xs font-bold text-white">{{ new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) }}</div>
-                        <div class="text-[10px] text-surface-500 font-medium uppercase tracking-widest mt-0.5">{{ new Date(log.date).toLocaleDateString(undefined, { weekday: 'long' }) }}</div>
+                        <div class="text-[11px] font-black text-slate-900 uppercase tracking-tighter">{{ new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) }}</div>
+                        <div class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{{ new Date(log.date).toLocaleDateString(undefined, { weekday: 'long' }) }}</div>
                       </div>
                       <div class="text-right">
-                        <div class="text-sm font-black font-mono tracking-tighter" :class="log.totalSales >= 0 ? 'text-emerald-400' : 'text-rose-400'">
+                        <div class="text-sm font-black tracking-tighter" :class="log.totalSales >= 0 ? 'text-emerald-600' : 'text-rose-600'">
                           ${{ log.totalSales.toFixed(2) }}
                         </div>
-                        <div class="text-[8px] text-surface-600 font-black uppercase">Net Sales</div>
+                        <div class="text-[8px] text-slate-400 font-black uppercase tracking-widest">Net Sales</div>
+                      </div>
+                   </div>
+
+                   <!-- Status & Submitter Info -->
+                   <div class="mt-4 flex items-center justify-between border-t border-slate-50 pt-4">
+                      <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[8px] font-black text-slate-500 border border-slate-200">
+                          {{ log.submittedBy?.[0]?.toUpperCase() || '?' }}
+                        </div>
+                        <span class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{{ log.submittedBy || 'Manual Entry' }}</span>
+                      </div>
+                      
+                      <div class="flex items-center gap-2">
+                        <span 
+                          class="px-2 py-0.5 rounded-full text-[7px] font-black uppercase tracking-[0.1em]"
+                          :class="log.status === 'PENDING_REVIEW' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'"
+                        >
+                          {{ log.status === 'PENDING_REVIEW' ? 'Pending Rev' : 'Verified' }}
+                        </span>
                       </div>
                    </div>
 
                    <div class="flex items-center justify-end gap-3 mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button @click.stop="loadLogForEditing(log)" class="p-2 text-surface-500 hover:text-primary-400 transition-colors"><Edit3 class="w-4 h-4" /></button>
-                      <button @click.stop="confirmDelete(log.id)" class="p-2 text-surface-500 hover:text-rose-400 transition-colors"><Trash2 class="w-4 h-4" /></button>
+                      <button v-if="log.status === 'PENDING_REVIEW'" 
+                        @click.stop="verifyLog(log.id)" 
+                        title="Verify Log"
+                        class="p-2 text-slate-400 hover:text-emerald-600 transition-colors"
+                      >
+                        <CheckCircle2 class="w-4 h-4" />
+                      </button>
+                      <button @click.stop="loadLogForEditing(log)" class="p-2 text-slate-400 hover:text-primary-600 transition-colors"><Edit3 class="w-4 h-4" /></button>
+                      <button @click.stop="confirmDelete(log.id)" class="p-2 text-slate-400 hover:text-rose-600 transition-colors"><Trash2 class="w-4 h-4" /></button>
                    </div>
                 </div>
                 <div v-if="filteredLogs.length === 0" class="text-center py-20">
-                   <Clock class="w-8 h-8 text-surface-800 mx-auto mb-3" />
-                   <p class="text-xs text-surface-600 font-medium uppercase tracking-widest">Empty Archives</p>
+                   <Clock class="w-10 h-10 text-slate-100 mx-auto mb-4" />
+                   <p class="text-[10px] text-slate-300 font-black uppercase tracking-widest">Empty Archives Control</p>
                 </div>
              </div>
           </div>
         </div>
       </div>
+
     </div>
 
     <!-- Delete Modal Overlay -->
@@ -627,35 +654,98 @@ const saveDailyLog = async () => {
         </div>
       </div>
     </div>
+
+    <!-- Wide Focus Audit Modal -->
+    <Teleport to="body">
+        <div v-if="activeAuditType" class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-10">
+            <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-md transition-opacity duration-300" @click="activeAuditType = null"></div>
+            
+            <div class="relative bg-white rounded-[3rem] w-full max-w-6xl max-h-[90vh] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col border border-slate-200">
+                <!-- Modal Header -->
+                <div class="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
+                    <div class="flex items-center gap-5">
+                        <div :class="['p-4 rounded-3xl shadow-lg', 
+                            activeAuditType === 'opening' ? 'bg-emerald-500 text-white' : 
+                            activeAuditType === 'closing' ? 'bg-rose-500 text-white' : 'bg-amber-500 text-white']">
+                            <Calculator class="w-8 h-8" />
+                        </div>
+                        <div>
+                            <h2 class="text-3xl font-black text-slate-900 uppercase italic tracking-tighter">
+                                {{ activeAuditType === 'opening' ? 'Opening Cash Audit' : 
+                                   activeAuditType === 'closing' ? 'Shift Closing Count' : 'Vault Cash / Deposit' }}
+                            </h2>
+                            <p class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Wide-View Precision Denomination Registry</p>
+                        </div>
+                    </div>
+                    <button 
+                        @click="activeAuditType = null"
+                        class="px-8 py-4 bg-slate-100 hover:bg-slate-900 hover:text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-sm"
+                    >
+                        Save & Close View
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="flex-1 overflow-y-auto p-10 custom-scrollbar bg-slate-50/30">
+                    <div v-if="activeAuditType === 'opening'" class="animate-in fade-in slide-in-from-bottom-5 duration-500">
+                        <CashDenominations label="Morning Register" v-model="openingCash" @update:details="(d) => openingDetails = d" />
+                    </div>
+                    <div v-if="activeAuditType === 'closing'" class="animate-in fade-in slide-in-from-bottom-5 duration-500">
+                        <CashDenominations label="End of Day Audit" v-model="closingCash" @update:details="(d) => closingDetails = d" />
+                    </div>
+                    <div v-if="activeAuditType === 'safe'" class="animate-in fade-in slide-in-from-bottom-5 duration-500">
+                        <CashDenominations label="Deposit Details" v-model="safeCash" @update:details="(d) => safeDetails = d" />
+                    </div>
+                    
+                    <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6 p-8 bg-white/50 rounded-[2.5rem] border border-slate-100">
+                         <div>
+                            <h4 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2 flex items-center gap-2">
+                               <Sparkles class="w-3 h-3 text-amber-500" /> Audit Best Practices
+                            </h4>
+                            <p class="text-[11px] text-slate-500 font-bold leading-relaxed">Please verify each denomination twice before closing. The system accounts for both loose and rolled coins automatically.</p>
+                         </div>
+                         <div class="text-right">
+                             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Running Session Total</p>
+                             <p class="text-3xl font-black text-slate-900 tabular-nums">${{ 
+                                (activeAuditType === 'opening' ? openingCash : (activeAuditType === 'closing' ? closingCash : safeCash)).toFixed(2) 
+                             }}</p>
+                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Teleport>
   </div>
 </template>
 
 <style scoped>
 .stats-card {
-  @apply glass-panel p-5 flex items-center gap-5 border-none transition-all hover:translate-y-[-2px] hover:shadow-xl duration-300;
+  @apply p-6 flex items-center gap-5 transition-all hover:translate-y-[-4px] hover:shadow-2xl duration-300 rounded-3xl;
 }
 .stats-icon {
-  @apply p-3.5 rounded-2xl;
+  @apply p-4 rounded-2xl;
 }
 .stats-label {
-  @apply text-xs text-surface-500 font-bold uppercase tracking-wider mb-0.5;
+  @apply text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1.5;
 }
 .stats-value {
-  @apply text-xl font-black font-mono text-white tracking-tight;
+  @apply text-2xl font-black font-mono tracking-tighter;
 }
+
 
 .section-card {
-  @apply glass-panel p-0 border-none overflow-hidden bg-surface-900/20;
+  @apply bg-white border-2 border-slate-50 rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500;
 }
 .section-header {
-  @apply px-6 py-5 bg-surface-800/30 border-b border-surface-800 flex items-center gap-4;
+  @apply px-8 py-6 border-b border-slate-50 flex items-center gap-5;
 }
 .section-icon {
-  @apply p-3 rounded-xl;
+  @apply p-4 rounded-2xl;
 }
 
+
 .modern-input {
-  @apply w-full bg-surface-900 border border-surface-800 rounded-2xl px-5 py-3.5 text-white placeholder-surface-700 focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500 hover:border-surface-700 transition-all outline-none;
+  @apply w-full bg-slate-50/50 border-2 border-slate-50 rounded-[1.5rem] px-6 py-4 text-slate-900 font-bold placeholder-slate-200 focus:bg-white focus:border-primary-500 hover:border-slate-100 transition-all outline-none text-sm;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -665,6 +755,17 @@ const saveDailyLog = async () => {
   @apply bg-transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-surface-800 rounded-full;
+  @apply bg-slate-200 rounded-full;
+}
+
+.no-spinner::-webkit-inner-spin-button,
+.no-spinner::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+.no-spinner {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 </style>

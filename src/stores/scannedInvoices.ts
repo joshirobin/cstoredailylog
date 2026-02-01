@@ -12,18 +12,33 @@ export interface ScannedInvoice {
     accountName?: string;
     rawText: string;
     createdAt: string;
+    locationId?: string;
 }
 
 import { db, storage } from '../firebaseConfig';
 import { collection, addDoc, getDocs, query, orderBy } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useLocationsStore } from './locations';
+import { where } from 'firebase/firestore';
 
 export const useScannedInvoicesStore = defineStore('scannedInvoices', () => {
     const scannedInvoices = ref<ScannedInvoice[]>([]);
+    const pendingScan = ref<any>(null);
+
+    const setPendingScan = (data: any) => {
+        pendingScan.value = data;
+    };
 
     const fetchScannedInvoices = async () => {
+        const locationsStore = useLocationsStore();
+        if (!locationsStore.activeLocationId) return;
+
         try {
-            const q = query(collection(db, 'scanned_logs'), orderBy('createdAt', 'desc'));
+            const q = query(
+                collection(db, 'scanned_logs'),
+                where('locationId', '==', locationsStore.activeLocationId),
+                orderBy('createdAt', 'desc')
+            );
             const querySnapshot = await getDocs(q);
             scannedInvoices.value = querySnapshot.docs.map(doc => {
                 const data = doc.data();
@@ -37,7 +52,10 @@ export const useScannedInvoicesStore = defineStore('scannedInvoices', () => {
         }
     };
 
-    const addScannedInvoice = async (invoice: Omit<ScannedInvoice, 'id' | 'createdAt'>, file?: File) => {
+    const addScannedInvoice = async (invoice: Omit<ScannedInvoice, 'id' | 'createdAt' | 'locationId'>, file?: File) => {
+        const locationsStore = useLocationsStore();
+        if (!locationsStore.activeLocationId) return;
+
         try {
             let fileUrl = '';
 
@@ -59,6 +77,7 @@ export const useScannedInvoicesStore = defineStore('scannedInvoices', () => {
                 vendor_name: invoice.fileName.split('.')[0],
                 total_amount: parseFloat(invoice.total?.replace('$', '') || '0') || 0,
                 status: 'Processed',
+                locationId: locationsStore.activeLocationId,
                 createdAt: new Date().toISOString()
             });
             await fetchScannedInvoices();
@@ -68,5 +87,5 @@ export const useScannedInvoicesStore = defineStore('scannedInvoices', () => {
         }
     };
 
-    return { scannedInvoices, fetchScannedInvoices, addScannedInvoice };
+    return { scannedInvoices, pendingScan, fetchScannedInvoices, addScannedInvoice, setPendingScan };
 });

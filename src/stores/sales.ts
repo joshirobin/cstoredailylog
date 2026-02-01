@@ -1,5 +1,9 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
+import { db } from '../firebaseConfig';
+import { collection, getDocs, setDoc, doc, query, orderBy, deleteDoc, where } from 'firebase/firestore';
+import { useLocationsStore } from './locations';
+import { useAuthStore } from './auth';
 
 export interface DenominationCounts {
     bills: { [key: string]: number }; // e.g. "100": 5
@@ -15,30 +19,36 @@ export interface SalesLog {
     id: string;
     date: string; // ISO string
     openingCash: number;
-    openingDenominations?: DenominationCounts; // Added
+    openingDenominations?: DenominationCounts;
     closingCash: number;
-    closingDenominations?: DenominationCounts; // Added
+    closingDenominations?: DenominationCounts;
     expenses: number;
     totalSales: number;
     notes: string;
-    // Safe Deposit fields
     safeCash?: number;
     safeCashDetails?: DenominationCounts;
     checks?: Check[];
     safeTotal?: number;
-    lottoReport?: string; // URL to attachment
-    otherReport?: string; // URL to attachment
+    lottoUrl?: string;
+    otherUrl?: string;
+    submittedBy?: string;
+    status?: 'PENDING_REVIEW' | 'VERIFIED';
+    locationId: string;
 }
-
-import { db } from '../firebaseConfig';
-import { collection, getDocs, setDoc, doc, query, orderBy } from 'firebase/firestore';
 
 export const useSalesStore = defineStore('sales', () => {
     const logs = ref<SalesLog[]>([]);
 
     const fetchLogs = async () => {
+        const locationsStore = useLocationsStore();
+        if (!locationsStore.activeLocationId) return;
+
         try {
-            const q = query(collection(db, 'sales_logs'), orderBy('date', 'desc'));
+            const q = query(
+                collection(db, 'sales_logs'),
+                where('locationId', '==', locationsStore.activeLocationId),
+                orderBy('date', 'desc')
+            );
             const querySnapshot = await getDocs(q);
             logs.value = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SalesLog));
         } catch (error) {
@@ -46,12 +56,19 @@ export const useSalesStore = defineStore('sales', () => {
         }
     };
 
-    const addLog = async (log: Omit<SalesLog, 'id'>) => {
+    const addLog = async (log: Omit<SalesLog, 'id' | 'locationId'>) => {
+        const locationsStore = useLocationsStore();
+        const authStore = useAuthStore();
+        if (!locationsStore.activeLocationId) return;
+
         try {
             const date = log.date;
-            // Use date as document ID to ensure one log per day
-            await setDoc(doc(db, 'sales_logs', date), {
+            // Use composite key or unique id for multi-location
+            const logId = `${locationsStore.activeLocationId}_${date}`;
+            await setDoc(doc(db, 'sales_logs', logId), {
                 ...log,
+                locationId: locationsStore.activeLocationId,
+                submittedBy: authStore.user?.email || 'unknown',
                 updatedAt: new Date().toISOString()
             });
             await fetchLogs();
@@ -62,11 +79,7 @@ export const useSalesStore = defineStore('sales', () => {
 
     const updateLog = async (id: string, updates: Partial<Omit<SalesLog, 'id'>>) => {
         try {
-            const logRef = doc(db, 'sales_logs', id); // ID acts as the date string here ideally, or the original ID
-            // Since we use date as ID in addLog, 'id' here might be the date.
-            // If the UI passes a random ID, this might break. Let's check how 'id' is used. 
-            // The previous code generated a random ID for API, but for Postgres we used unique date.
-            // Let's assume 'id' is the document ID (which we set to date string).
+            const logRef = doc(db, 'sales_logs', id);
             await setDoc(logRef, updates, { merge: true });
             await fetchLogs();
         } catch (error) {
@@ -74,9 +87,23 @@ export const useSalesStore = defineStore('sales', () => {
         }
     };
 
-    const deleteLog = (id: string) => {
-        // Implement DELETE on server if needed
-        logs.value = logs.value.filter(log => log.id !== id);
+    const deleteLog = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, 'sales_logs', id));
+            await fetchLogs();
+        } catch (error) {
+            console.error('Failed to delete sales log:', error);
+        }
+    };
+
+    const updateLogStatus = async (id: string, status: 'PENDING_REVIEW' | 'VERIFIED') => {
+        try {
+            const logRef = doc(db, 'sales_logs', id);
+            await setDoc(logRef, { status, updatedStatusAt: new Date().toISOString() }, { merge: true });
+            await fetchLogs();
+        } catch (error) {
+            console.error('Failed to update log status:', error);
+        }
     };
 
     const getLogsByDateRange = (startDate: Date, endDate: Date) => {
@@ -95,6 +122,13 @@ export const useSalesStore = defineStore('sales', () => {
         });
     };
 
-    return { logs, fetchLogs, addLog, updateLog, deleteLog, getLogsByDateRange };
+    return {
+        logs,
+        fetchLogs,
+        addLog,
+        updateLog,
+        deleteLog,
+        getLogsByDateRange,
+        updateLogStatus
+    };
 });
-
