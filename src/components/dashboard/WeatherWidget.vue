@@ -34,12 +34,18 @@ const getIcon = (iconName: string) => {
 
 const updateWeather = async () => {
   loading.value = true;
-  const loc = locationsStore.activeLocation;
+  
+  // Explicitly find the location object from the array based on the current ID.
+  // This ensures we get the correct object even if 'activeLocation' computed hasn't updated yet.
+  const currentId = locationsStore.activeLocationId;
+  const loc = locationsStore.locations.find(l => l.id === currentId) || locationsStore.locations[0];
   
   // Default to Dallas, TX coordinates only if absolutely no location data
   const lat = Number(loc?.latitude) || 32.7767;
   const lon = Number(loc?.longitude) || -96.7970;
   
+  console.log(`WeatherWidget: Updating for ${loc?.name} (${lat}, ${lon})`);
+
   // Ensure we have valid numbers before fetching
   if (isNaN(lat) || isNaN(lon) || (lat === 0 && lon === 0)) {
      console.warn('Invalid coordinates for location, using defaults.');

@@ -78,6 +78,7 @@ export const useLocationsStore = defineStore('locations', () => {
     };
 
     const setActiveLocation = (id: string) => {
+        console.log('Location Store: Switching active location to', id);
         activeLocationId.value = id;
         localStorage.setItem('activeLocationId', id);
     };
