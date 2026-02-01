@@ -151,6 +151,8 @@ export const useLocationsStore = defineStore('locations', () => {
         setActiveLocation,
         addLocation,
         updateLocation,
-        clearData
+        clearData,
+        geocodeZipCode
     };
 });
+

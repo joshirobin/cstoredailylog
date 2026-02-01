@@ -40,26 +40,50 @@ const updateWeather = async () => {
   const currentId = locationsStore.activeLocationId;
   const loc = locationsStore.locations.find(l => l.id === currentId) || locationsStore.locations[0];
   
-  // Default to Dallas, TX coordinates only if absolutely no location data
-  const lat = Number(loc?.latitude) || 32.7767;
-  const lon = Number(loc?.longitude) || -96.7970;
+  let lat = Number(loc?.latitude);
+  let lon = Number(loc?.longitude);
   
-  console.log(`WeatherWidget: Updating for ${loc?.name} (${lat}, ${lon})`);
-
-  // Ensure we have valid numbers before fetching
+  // Checking if coordinates are missing or invalid
   if (isNaN(lat) || isNaN(lon) || (lat === 0 && lon === 0)) {
-     console.warn('Invalid coordinates for location, using defaults.');
+     console.warn(`WeatherWidget: Missing coordinates for ${loc?.name}. Attempting Geocoding...`);
+     
+     if (loc?.zipCode && locationsStore.geocodeZipCode) {
+        const geo = await locationsStore.geocodeZipCode(loc.zipCode);
+        if (geo) {
+            lat = geo.latitude;
+            lon = geo.longitude;
+            console.log(`WeatherWidget: Geocoded ${loc.name} to (${lat}, ${lon})`);
+            
+            // Optionally update the store so we don't have to geocode again
+            // We do this silently to avoid UI flashing or permission errors
+            try {
+                // Not calling updateLocation freely to avoid heavy writes, 
+                // but for now we just use the coordinate for this session.
+            } catch (e) {
+                console.error("Failed to save geocoded data", e);
+            }
+        }
+     }
   }
 
+  // Fallback to Dallas ONLY if geocoding also failed
+  if (isNaN(lat) || isNaN(lon) || (lat === 0 && lon === 0)) {
+      console.warn("WeatherWidget: Geocoding failed. Using defaults.");
+      lat = 32.7767;
+      lon = -96.7970;
+  }
+  
+  console.log(`WeatherWidget: Fetching for ${loc?.name} at (${lat}, ${lon})`);
   weather.value = await fetchWeather(lat, lon);
   loading.value = false;
 };
 
 // Initial load
 onMounted(async () => {
-  if (!locationsStore.activeLocationId) {
+  if (locationsStore.locations.length === 0) {
     await locationsStore.fetchLocations();
   }
+  // Ensure we wait for fetch to complete before triggering weather
   await updateWeather();
 });
 
