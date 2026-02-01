@@ -49,8 +49,10 @@ const ownPrices = computed(() => {
     return fuelStore.currentPrices.map(p => ({
         type: p.type,
         current: p.cashPrice,
-        suggested: Number((p.cashPrice - (Math.random() * 0.05)).toFixed(2)),
-        change: Number(((Math.random() * 0.1) - 0.05).toFixed(2))
+        // Match industry standard .9 format if not already present
+        exactCurrent: p.cashPrice % 0.01 === 0 ? p.cashPrice + 0.009 : p.cashPrice,
+        suggested: Number((p.cashPrice - 0.02).toFixed(3)),
+        change: -0.02
     }));
 });
 
@@ -80,6 +82,18 @@ const handleSubmit = async () => {
     } catch (e) {
         alert("Failed to log price");
     }
+};
+
+const formatPrice = (price: any) => {
+    const num = Number(price || 0);
+    const fixed = num.toFixed(3);
+    const parts = fixed.split('.');
+    const main = parts[0] || '0';
+    const cents = parts[1] || '000';
+    return {
+        main: `${main}.${cents.substring(0, 2)}`,
+        fraction: cents[2] || '0'
+    };
 };
 
 const formatDate = (date: any) => {
@@ -159,9 +173,13 @@ watch(() => locationsStore.activeLocationId, () => {
             <div class="flex flex-wrap gap-4">
                 <div v-for="p in ownPrices" :key="p.type" class="bg-white/5 backdrop-blur-md px-8 py-4 rounded-3xl border border-white/10 text-center min-w-[140px] hover:bg-white/10 transition-colors">
                     <p class="text-[9px] font-black uppercase tracking-widest mb-1 text-slate-400">{{ p.type }}</p>
-                    <div class="flex items-center justify-center gap-3">
-                        <span class="text-2xl font-black tracking-tighter">${{ p.suggested }}</span>
-                        <div v-if="p.change !== 0" :class="['flex items-center text-[10px] font-black px-2 py-0.5 rounded-lg shadow-sm', p.change < 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400']">
+                    <div class="flex items-center justify-center gap-2">
+                        <div class="flex items-baseline font-mono tracking-tighter">
+                            <span class="text-sm font-bold mr-0.5">$</span>
+                            <span class="text-2xl font-black">{{ formatPrice(p.suggested).main }}</span>
+                            <span class="text-[10px] font-black self-start mt-1 ml-0.5 opacity-60">{{ formatPrice(p.suggested).fraction }}</span>
+                        </div>
+                        <div v-if="p.change !== 0" :class="['flex items-center text-[10px] font-black px-2 py-0.5 rounded-lg shadow-sm h-fit mb-1', p.change < 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400']">
                             <component :is="p.change < 0 ? ChevronDown : ChevronUp" class="w-3 h-3" />
                             {{ Math.abs(p.change).toFixed(2) }}
                         </div>
@@ -312,7 +330,11 @@ watch(() => locationsStore.activeLocationId, () => {
                         <div class="mt-auto grid grid-cols-2 gap-4 pt-6 border-t border-slate-50">
                             <div v-for="p in c.prices" :key="p.fuelType" class="space-y-1">
                                 <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest opacity-70">{{ p.fuelType }}</p>
-                                <p class="text-2xl font-black font-mono text-slate-900 tracking-tighter">${{ p.price }}</p>
+                                <div class="flex items-baseline font-mono text-slate-900 tracking-tighter">
+                                    <span class="text-sm font-bold mr-0.5">$</span>
+                                    <span class="text-2xl font-black">{{ formatPrice(p.price).main }}</span>
+                                    <span class="text-[10px] font-black self-start mt-1.5 ml-0.5 opacity-60">{{ formatPrice(p.price).fraction }}</span>
+                                </div>
                             </div>
                         </div>
                     </div>

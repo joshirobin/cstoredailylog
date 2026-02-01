@@ -85,15 +85,25 @@ export const usePricingStore = defineStore('pricing', () => {
         try {
             const discovered: CompetitorPrice[] = [];
 
-            // Use store's actual Regular price as baseline, or fallback to 3.35
-            const storeRegular = fuelStore.currentPrices.find((p: any) => p.type === 'Regular')?.cashPrice || 3.35;
-            const basePrice = storeRegular;
+            // Region-Specific Exact Market Baselines
+            const marketBaselines: Record<string, number> = {
+                '57268': 2.589, // Toronto, SD
+                '56170': 2.649, // Ruthton, MN
+                '75201': 2.449  // Dallas, TX
+            };
+
+            const regionalBaseline = marketBaselines[activeZip] || 3.349;
+
+            // Use store's actual Regular price if available, scaled to industry .9 format
+            const storeRegularRaw = fuelStore.currentPrices.find((p: any) => p.type === 'Regular')?.cashPrice;
+            const basePrice = storeRegularRaw ? Math.floor(storeRegularRaw * 10) / 10 + 0.009 : regionalBaseline;
 
             MAJOR_BRANDS.forEach((brand) => {
                 const count = Math.floor(Math.random() * 2) + 1;
                 for (let i = 0; i < count; i++) {
                     const dist = Math.random() * radiusMiles;
-                    const priceOffset = (Math.random() * 0.15) - 0.05;
+                    // Realistic market variance ($0.02 - $0.12 spread)
+                    const priceOffset = (Math.random() * 0.10) - 0.02;
 
                     const zipSuffix = Math.floor(Math.random() * 10).toString();
                     const simulatedZip = activeZip.length >= 5
@@ -107,8 +117,8 @@ export const usePricingStore = defineStore('pricing', () => {
                         distanceStr: `${dist.toFixed(1)} miles`,
                         zipCode: simulatedZip,
                         prices: [
-                            { fuelType: 'Regular', price: Number((basePrice + priceOffset).toFixed(2)) },
-                            { fuelType: 'Diesel', price: Number((basePrice + 0.65 + priceOffset).toFixed(2)) }
+                            { fuelType: 'Regular', price: Number((basePrice + priceOffset).toFixed(3)) },
+                            { fuelType: 'Diesel', price: Number((basePrice + 0.65 + priceOffset).toFixed(3)) }
                         ],
                         locationId: locationsStore.activeLocationId!,
                         loggedBy: 'Perimeter Scan',
