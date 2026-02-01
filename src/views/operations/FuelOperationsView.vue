@@ -5,7 +5,7 @@ import {
   LineChart, MousePointer2,
   Activity, Radar, Droplet, Save, 
   ChevronLeft, ChevronRight, Loader2, Paperclip, 
-  Plus, Zap, Calendar, LayoutGrid
+  Plus, Zap, Calendar, LayoutGrid, BarChart3
 } from 'lucide-vue-next';
 import { usePricingStore } from '../../stores/pricing';
 import { useFuelStore, type FuelEntry } from '../../stores/fuel';
@@ -23,12 +23,17 @@ const selectedDate = ref<string>(new Date().toISOString().split('T')[0] as strin
 const isSubmitting = ref(false);
 
 // AI & Logistics State
-const aiRecommendations = computed(() => pricingStore.getPriceRecommendations());
+const aiRecommendations = computed(() => {
+    const recs = pricingStore.getPriceRecommendations();
+    // Narrow type to ensure non-null
+    return (recs || []).filter((r): r is NonNullable<typeof r> => r !== null);
+});
+
 const logisticsSummary = computed(() => {
     return fuelStore.tankConfigs.map(config => {
         const stats = fuelStore.getLogisticsStatus(config.type);
         return stats ? { type: config.type, ...stats } : null;
-    }).filter((s): s is any => s !== null);
+    }).filter((s): s is NonNullable<typeof s> => s !== null);
 });
 
 const varianceHistory = computed(() => fuelStore.getVarianceTrends());
@@ -286,7 +291,7 @@ const historicalVolumeData = computed(() => {
         const log = fuelStore.logs.find(l => l.date === dateStr);
         const totalSold = log ? log.entries.reduce((s, e) => s + (Number(e.soldGal) || 0), 0) : 0;
         const totalVariance = log ? log.totalVariance : 0;
-        const dateObj = new Date(dateStr);
+        const dateObj = new Date(dateStr || '');
         const baseline = totalSold > 0 ? totalSold : (8000 + Math.sin(dateObj.getTime()) * 1000);
         
         return {
@@ -303,10 +308,6 @@ const maxVolume = computed(() => {
     return values.length > 0 ? Math.max(...values) : 10000;
 });
 
-// For Lint
-const _activeAlarms = activeAlarms;
-const _maxVolume = maxVolume;
-const _addOrderItem = addOrderItem;
 
 </script>
 
@@ -321,7 +322,10 @@ const _addOrderItem = addOrderItem;
         </div>
         <div>
           <h1 class="text-3xl font-black text-slate-900 uppercase italic tracking-tighter">Fuel Operations Hub</h1>
-          <p class="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Terminal Logistics & Tank Inventory</p>
+          <div class="flex items-center gap-2 mt-1">
+            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em]">Terminal Logistics & Tank Inventory</p>
+            <span v-if="activeAlarms.length > 0" class="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span>
+          </div>
         </div>
       </div>
       
@@ -416,6 +420,34 @@ const _addOrderItem = addOrderItem;
                     <p class="text-2xl font-black text-slate-900 tabular-nums">{{ tank.level.toLocaleString() }} <span class="text-[10px] text-slate-400">GAL</span></p>
                     <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cap: {{ tank.totalCapacity.toLocaleString() }}</p>
                 </div>
+            </div>
+        </div>
+
+        <!-- Volume Trend (Feature 3 Enhancement) -->
+        <div class="bg-white border-2 border-slate-100 rounded-[3rem] p-10 shadow-sm">
+            <div class="flex items-center justify-between mb-8">
+                <div>
+                    <h3 class="text-xl font-black text-slate-900 uppercase italic tracking-tighter">Volume Velocity</h3>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">14-Day rolling terminal pull trend</p>
+                </div>
+                <BarChart3 class="w-5 h-5 text-slate-300" />
+            </div>
+            
+            <div class="h-48 flex items-end gap-2">
+                <div v-for="d in historicalVolumeData" :key="d.displayDate" 
+                     class="flex-1 bg-slate-900/5 rounded-t-xl relative group"
+                     :style="{ height: `${(d.volume / maxVolume) * 100}%` }">
+                    <div class="absolute inset-0 bg-slate-900 rounded-t-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div class="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-slate-900 text-white text-[8px] px-2 py-1 rounded-lg">
+                        {{ d.volume.toLocaleString() }} GAL
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-between mt-6 px-1">
+                <span v-for="d in historicalVolumeData" :key="d.displayDate" 
+                      class="text-[7px] font-black text-slate-400 uppercase tracking-tighter">
+                    {{ d.displayDate }}
+                </span>
             </div>
         </div>
     </div>
@@ -703,6 +735,9 @@ const _addOrderItem = addOrderItem;
                             <option v-for="t in fuelStore.defaultFuelTypes" :key="t" :value="t">{{ t }}</option>
                         </select>
                         <input v-model.number="item.gallons" type="number" placeholder="Gals" class="w-48 modern-input" />
+                        <button v-if="idx === newOrder.items.length - 1" @click="addOrderItem" class="p-4 bg-slate-50 text-slate-400 rounded-2xl hover:bg-slate-100 transition-colors">
+                            <Plus class="w-5 h-5" />
+                        </button>
                     </div>
                     <button @click="saveOrder" class="w-full py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-600 transition-all">Submit PO to Terminal</button>
                 </div>
@@ -755,7 +790,7 @@ const _addOrderItem = addOrderItem;
                    <div v-for="inv in fuelStore.invoices" :key="inv.id" class="p-6 bg-white border border-slate-100 rounded-3xl flex justify-between items-center">
                       <div>
                          <p class="text-xs font-black">{{ inv.supplier }}</p>
-                         <p class="text-[8px] font-bold text-slate-400 uppercase mt-1">{{ inv.invoiceNumber }} • {{ new Date(inv.date).toLocaleDateString() }}</p>
+                         <p class="text-[8px] font-bold text-slate-400 uppercase mt-1">{{ inv.invoiceNumber }} • {{ inv.date ? new Date(inv.date).toLocaleDateString() : 'N/A' }}</p>
                       </div>
                       <span class="text-sm font-black tabular-nums">${{ inv.totalAmount.toLocaleString() }}</span>
                    </div>
