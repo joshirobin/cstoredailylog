@@ -19,7 +19,12 @@ const handleRegister = async () => {
   
   try {
     await authStore.register(email.value, password.value, name.value, role.value);
-    router.push('/');
+    
+    // Explicitly sign out after registration so they have to login with verification
+    await authStore.logout();
+    
+    alert('Account created successfully! A verification link has been sent to your email. Please verify your email before logging in.');
+    router.push('/login');
   } catch (err: any) {
     if (err.code === 'auth/email-already-in-use') {
       errorMsg.value = 'Email is already in use.';
