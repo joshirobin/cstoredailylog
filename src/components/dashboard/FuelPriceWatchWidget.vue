@@ -60,7 +60,7 @@ const priceDiff = computed(() => myRegularPrice.value - competitorAvg.value);
           <p class="text-sm font-bold text-slate-900 mt-0.5">Regular Market Analysis</p>
         </div>
       </div>
-      <router-link to="/operations/competitor-watch" class="p-2 text-slate-400 hover:text-slate-900 transition-colors">
+      <router-link to="/competitor-watch" class="p-2 text-slate-400 hover:text-slate-900 transition-colors">
         <MoreHorizontal class="w-5 h-5" />
       </router-link>
     </div>
