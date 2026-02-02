@@ -37,7 +37,7 @@ export const usePricingStore = defineStore('pricing', () => {
         try {
             const q = query(
                 collection(db, 'competitor_prices'),
-                where('locationId', '==', locationsStore.activeLocationId),
+                where('zipCode', '==', locationsStore.activeLocation?.zipCode || ''),
                 orderBy('timestamp', 'desc'),
                 limit(100)
             );
@@ -65,6 +65,7 @@ export const usePricingStore = defineStore('pricing', () => {
             await addDoc(collection(db, 'competitor_prices'), {
                 ...log,
                 locationId: locationsStore.activeLocationId,
+                zipCode: locationsStore.activeLocation?.zipCode || '',
                 timestamp: Timestamp.now()
             });
             await fetchCompetitorPrices();

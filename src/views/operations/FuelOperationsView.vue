@@ -10,12 +10,14 @@ import {
 import { usePricingStore } from '../../stores/pricing';
 import { useFuelStore, type FuelEntry } from '../../stores/fuel';
 import { useNotificationStore } from '../../stores/notifications';
+import { useLocationsStore } from '../../stores/locations';
 import { storage } from '../../firebaseConfig';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const fuelStore = useFuelStore();
 const pricingStore = usePricingStore();
 const notificationStore = useNotificationStore();
+const locationsStore = useLocationsStore();
 
 // Navigation & Tabs
 const activeTab = ref<'inventory' | 'orders' | 'invoices' | 'analytics' | 'price-watch' | 'logistics'>('analytics');
@@ -76,6 +78,16 @@ onMounted(() => {
 });
 
 watch(selectedDate, () => initializeInventory());
+
+watch(() => locationsStore.activeLocationId, () => {
+    fuelStore.stopSync();
+    fuelStore.fetchLogs();
+    fuelStore.fetchOrders();
+    fuelStore.fetchInvoices();
+    fuelStore.fetchCurrentPrices();
+    fuelStore.fetchCompetitorPrices();
+    initializeInventory();
+});
 
 const initializeInventory = () => {
     const existingLog = fuelStore.logs.find(l => l.date === selectedDate.value);
@@ -594,7 +606,10 @@ const maxVolume = computed(() => {
             <div class="xl:col-span-12 bg-white border-2 border-slate-100 rounded-[3rem] p-10 shadow-sm">
                 <div class="flex items-center justify-between mb-10">
                     <div>
-                        <h3 class="text-xl font-black text-slate-900 uppercase italic tracking-tighter">Perimeter Market Scan</h3>
+                        <div class="flex items-center gap-3">
+                            <h3 class="text-xl font-black text-slate-900 uppercase italic tracking-tighter">Perimeter Market Scan</h3>
+                            <span class="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[8px] font-black uppercase tracking-widest">Zip: {{ locationsStore.activeLocation?.zipCode || 'N/A' }}</span>
+                        </div>
                         <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Direct competitor tracking and survey</p>
                     </div>
                     <button @click="addNewCompetitor" class="px-6 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-600 transition-all flex items-center gap-2 shadow-xl">

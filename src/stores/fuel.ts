@@ -61,6 +61,7 @@ export interface CompetitorPrice {
     id: string;
     competitorName: string;
     distance: string;
+    zipCode: string;
     prices: { type: string; price: number }[];
     updatedAt: string;
 }
@@ -217,11 +218,11 @@ export const useFuelStore = defineStore('fuel', () => {
 
     const fetchCompetitorPrices = () => {
         const locationsStore = useLocationsStore();
-        if (unsubscribeCompetitors || !locationsStore.activeLocationId) return;
+        if (unsubscribeCompetitors || !locationsStore.activeLocation?.zipCode) return;
 
         const q = query(
             collection(db, 'fuel_competitors'),
-            where('locationId', '==', locationsStore.activeLocationId),
+            where('zipCode', '==', locationsStore.activeLocation.zipCode),
             orderBy('updatedAt', 'desc')
         );
         unsubscribeCompetitors = onSnapshot(q, (snapshot) => {
@@ -231,13 +232,14 @@ export const useFuelStore = defineStore('fuel', () => {
 
     const updateCompetitorPrice = async (price: Partial<CompetitorPrice> & { competitorName: string }) => {
         const locationsStore = useLocationsStore();
-        if (!locationsStore.activeLocationId) return;
+        if (!locationsStore.activeLocation?.zipCode) return;
         try {
-            const docId = price.id || `${locationsStore.activeLocationId}_${price.competitorName.toLowerCase().replace(/\s+/g, '-')}`;
+            const zipCode = locationsStore.activeLocation.zipCode;
+            const docId = price.id || `${zipCode}_${price.competitorName.toLowerCase().replace(/\s+/g, '-')}`;
             await setDoc(doc(db, 'fuel_competitors', docId), {
                 ...price,
                 id: docId,
-                locationId: locationsStore.activeLocationId,
+                zipCode,
                 updatedAt: new Date().toISOString()
             });
         } catch (error) {
