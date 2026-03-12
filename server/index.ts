@@ -139,12 +139,25 @@ app.post('/api/send-email', async (req, res) => {
         };
 
         if (attachments && Array.isArray(attachments)) {
-            mailOptions.attachments = attachments.map((att: any) => ({
-                filename: att.name,
-                content: att.data.split('base64,')[1],
-                encoding: 'base64',
-                contentType: att.type
-            }));
+            mailOptions.attachments = attachments.map((att: any) => {
+                const isBase64 = att.data && att.data.includes('base64,');
+                const isUrl = att.data && (att.data.startsWith('http://') || att.data.startsWith('https://'));
+
+                if (isUrl) {
+                    return {
+                        filename: att.name,
+                        path: att.data,
+                        contentType: att.type
+                    };
+                }
+
+                return {
+                    filename: att.name,
+                    content: isBase64 ? att.data.split('base64,')[1] : att.data,
+                    encoding: isBase64 ? 'base64' : undefined,
+                    contentType: att.type
+                };
+            });
         }
 
         const info = await transporter.sendMail(mailOptions);

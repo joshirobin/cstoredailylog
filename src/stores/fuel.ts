@@ -65,6 +65,28 @@ export interface CompetitorPrice {
     prices: { type: string; price: number }[];
     updatedAt: string;
 }
+
+export interface FuelDelivery {
+    id: string;
+    date: string;
+    eftDate: string;
+    supplier: string;
+    locationId: string;
+    items: {
+        type: string;
+        gallons: number;
+        costPerGal: number;
+        retailPerGal: number;
+        profitMargin: number;
+        totalProfit: number;
+        totalCost: number;
+    }[];
+    totalGallons: number;
+    totalAmount: number;
+    totalProfit: number;
+    createdAt: string;
+}
+
 export interface CurrentFuelPrice {
     type: string;
     cashPrice: number;
@@ -87,20 +109,63 @@ export const useFuelStore = defineStore('fuel', () => {
     const invoices = ref<FuelInvoice[]>([]);
     const competitorPrices = ref<CompetitorPrice[]>([]);
     const currentPrices = ref<CurrentFuelPrice[]>([]);
+    const deliveries = ref<FuelDelivery[]>([]);
     const loading = ref(false);
 
-    const tankConfigs = ref<TankConfig[]>([
-        { type: 'Regular', capacity: 10000, reorderPoint: 3000, shutoffPoint: 300 },
-        { type: 'Plus', capacity: 8000, reorderPoint: 2000, shutoffPoint: 300 },
-        { type: 'Premium', capacity: 8000, reorderPoint: 2000, shutoffPoint: 300 },
-        { type: 'Diesel', capacity: 12000, reorderPoint: 4000, shutoffPoint: 300 }
-    ]);
+    const tankConfigs = ref<TankConfig[]>([]);
+    const defaultFuelTypes = ['Regular', 'Super (Premium)', 'Diesel B20', 'Diesel B5', 'Diesel Farm', 'Diesel Clear'];
 
-    const defaultFuelTypes = ['Regular', 'Plus', 'Premium', 'Diesel', 'Kerosene'];
+    const fetchTankConfigs = () => {
+        const locationsStore = useLocationsStore();
+        if (unsubscribeTanks || !locationsStore.activeLocationId) return;
+
+        const q = query(
+            collection(db, 'fuel_tank_configs'),
+            where('locationId', '==', locationsStore.activeLocationId)
+        );
+
+        unsubscribeTanks = onSnapshot(q, async (snapshot) => {
+            if (snapshot.empty) {
+                // Initialize default tanks if none exist
+                const defaults: TankConfig[] = [
+                    { type: 'Regular', capacity: 12000, reorderPoint: 3000, shutoffPoint: 300 },
+                    { type: 'Super (Premium)', capacity: 8000, reorderPoint: 2000, shutoffPoint: 300 },
+                    { type: 'Diesel B20', capacity: 10000, reorderPoint: 3000, shutoffPoint: 300 },
+                    { type: 'Diesel B5', capacity: 10000, reorderPoint: 3000, shutoffPoint: 300 },
+                    { type: 'Diesel Farm', capacity: 8000, reorderPoint: 2000, shutoffPoint: 300 },
+                    { type: 'Diesel Clear', capacity: 10000, reorderPoint: 3000, shutoffPoint: 300 }
+                ];
+
+                for (const config of defaults) {
+                    await saveTankConfig(config);
+                }
+            } else {
+                tankConfigs.value = snapshot.docs.map(doc => doc.data() as TankConfig);
+            }
+        });
+    };
+
+    const saveTankConfig = async (config: TankConfig) => {
+        const locationsStore = useLocationsStore();
+        if (!locationsStore.activeLocationId) return;
+
+        try {
+            const docId = `${locationsStore.activeLocationId}_${config.type.replace(/\s+/g, '_')}`;
+            await setDoc(doc(db, 'fuel_tank_configs', docId), {
+                ...config,
+                locationId: locationsStore.activeLocationId,
+                updatedAt: new Date().toISOString()
+            });
+        } catch (error) {
+            console.error('Failed to save tank config:', error);
+            throw error;
+        }
+    };
 
     let unsubscribeLogs: (() => void) | null = null;
     let unsubscribeCompetitors: (() => void) | null = null;
     let unsubscribePrices: (() => void) | null = null;
+    let unsubscribeTanks: (() => void) | null = null;
 
     const fetchLogs = () => {
         const locationsStore = useLocationsStore();
@@ -126,6 +191,7 @@ export const useFuelStore = defineStore('fuel', () => {
         if (unsubscribeLogs) { unsubscribeLogs(); unsubscribeLogs = null; }
         if (unsubscribeCompetitors) { unsubscribeCompetitors(); unsubscribeCompetitors = null; }
         if (unsubscribePrices) { unsubscribePrices(); unsubscribePrices = null; }
+        if (unsubscribeTanks) { unsubscribeTanks(); unsubscribeTanks = null; }
     };
 
     const addLog = async (log: Omit<FuelLog, 'id'>) => {
@@ -272,9 +338,9 @@ export const useFuelStore = defineStore('fuel', () => {
                 // Initialize with defaults if collection is empty
                 const defaults: Omit<CurrentFuelPrice, 'locationId'>[] = [
                     { type: 'Regular', cashPrice: 2.99, creditPrice: 3.09, costPerGal: 2.80, margin: 0.19, updatedAt: new Date().toISOString() },
-                    { type: 'Plus', cashPrice: 3.29, creditPrice: 3.39, costPerGal: 3.00, margin: 0.29, updatedAt: new Date().toISOString() },
-                    { type: 'Premium', cashPrice: 3.59, creditPrice: 3.69, costPerGal: 3.20, margin: 0.39, updatedAt: new Date().toISOString() },
-                    { type: 'Diesel', cashPrice: 3.89, creditPrice: 3.89, costPerGal: 3.50, margin: 0.39, updatedAt: new Date().toISOString() }
+                    { type: 'Super (Premium)', cashPrice: 3.59, creditPrice: 3.69, costPerGal: 3.20, margin: 0.39, updatedAt: new Date().toISOString() },
+                    { type: 'Diesel B20', cashPrice: 3.89, creditPrice: 3.89, costPerGal: 3.50, margin: 0.39, updatedAt: new Date().toISOString() },
+                    { type: 'Diesel Clear', cashPrice: 3.99, creditPrice: 3.99, costPerGal: 3.60, margin: 0.39, updatedAt: new Date().toISOString() }
                 ];
                 for (const p of defaults) {
                     await setDoc(doc(db, 'fuel_current_prices', `${locationsStore.activeLocationId}_${p.type}`), {
@@ -301,15 +367,49 @@ export const useFuelStore = defineStore('fuel', () => {
         }
     };
 
+    const fetchDeliveries = async () => {
+        const locationsStore = useLocationsStore();
+        if (!locationsStore.activeLocationId) return;
+
+        try {
+            const q = query(
+                collection(db, 'fuel_deliveries'),
+                where('locationId', '==', locationsStore.activeLocationId),
+                orderBy('date', 'desc')
+            );
+            const querySnapshot = await getDocs(q);
+            deliveries.value = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FuelDelivery));
+        } catch (error) {
+            console.error('Failed to fetch fuel deliveries:', error);
+        }
+    };
+
+    const addDelivery = async (delivery: Omit<FuelDelivery, 'id' | 'locationId'>) => {
+        const locationsStore = useLocationsStore();
+        if (!locationsStore.activeLocationId) return;
+        try {
+            const docRef = await addDoc(collection(db, 'fuel_deliveries'), {
+                ...delivery,
+                locationId: locationsStore.activeLocationId,
+                createdAt: new Date().toISOString()
+            });
+            await fetchDeliveries();
+            return docRef.id;
+        } catch (error) {
+            console.error('Failed to add fuel delivery:', error);
+            throw error;
+        }
+    };
+
     // --- Logistics Intelligence (Feature 2) ---
     const getLogisticsStatus = (type: string) => {
         const config = tankConfigs.value.find(c => c.type === type);
         const latestLog = logs.value[0];
         const entry = latestLog?.entries.find(e => e.type === type);
 
-        if (!config || !entry) return null;
+        if (!config) return null;
 
-        const currentGallons = entry.endInvAtg;
+        const currentGallons = entry?.endInvAtg || 0;
         const ullage = (config.capacity * 0.90) - currentGallons; // 90% safe fill rule
 
         // Simple prediction: average of last 3 logs sold gallons
@@ -355,6 +455,8 @@ export const useFuelStore = defineStore('fuel', () => {
         invoices, fetchInvoices, addInvoice,
         competitorPrices, fetchCompetitorPrices, updateCompetitorPrice, deleteCompetitor,
         currentPrices, fetchCurrentPrices, updateCurrentPrice,
-        tankConfigs, getLogisticsStatus, getVarianceTrends, getMarginVelocity
+        deliveries, fetchDeliveries, addDelivery,
+        tankConfigs, fetchTankConfigs, saveTankConfig,
+        getLogisticsStatus, getVarianceTrends, getMarginVelocity
     };
 });

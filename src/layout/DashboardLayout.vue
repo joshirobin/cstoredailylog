@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { RouterView } from 'vue-router';
 import Sidebar from '../components/Sidebar.vue';
 import NotificationCenter from '../components/NotificationCenter.vue';
+import SyncAssistant from '../components/SyncAssistant.vue';
 import LocationSwitcher from '../components/dashboard/LocationSwitcher.vue';
 import { Bell, Search, X, Check } from 'lucide-vue-next';
 import { useAuthStore } from '../stores/auth';
@@ -73,85 +74,88 @@ onMounted(async () => {
     <!-- Sidebar -->
     <Sidebar />
     <NotificationCenter />
+    <SyncAssistant />
 
     <!-- Main Content Area -->
     <div class="flex-1 flex flex-col min-w-0">
       <!-- Top Header -->
-      <header class="h-16 border-b border-slate-100 bg-white/80 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between px-8">
-        <div class="flex items-center gap-4 flex-1">
+      <header class="h-20 border-b border-white/20 bg-white/70 backdrop-blur-2xl sticky top-0 z-30 flex items-center justify-between px-10 shadow-sm">
+        <div class="flex items-center gap-6 flex-1">
           <!-- Location Switcher -->
-          <LocationSwitcher />
+          <LocationSwitcher v-if="!locationsStore.activeLocation?.disabledFeatures?.includes('store-selector')" />
           
-          <!-- Search Bar (Visual Only) -->
-          <div class="relative w-full max-w-md hidden md:block">
-            <Search class="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+          <!-- Search Bar (Premium) -->
+          <div class="relative w-full max-w-md hidden md:block group">
+            <Search class="absolute left-4 top-3.5 w-4 h-4 text-slate-400 group-focus-within:text-primary-600 transition-colors" />
             <input 
               type="text" 
-              placeholder="Search invoices, accounts..." 
-              class="w-full bg-slate-100/50 border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary-500/50"
+              placeholder="Search anything..." 
+              class="w-full bg-slate-100/50 border-2 border-transparent rounded-2xl py-3 pl-12 pr-4 text-sm font-bold focus:bg-white focus:border-primary-500/20 focus:ring-4 focus:ring-primary-500/5 outline-none transition-all placeholder:text-slate-400"
             >
           </div>
         </div>
 
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-6">
           <!-- Notifications -->
           <div class="relative">
             <button 
                 @click="showNotifications = !showNotifications"
-                class="relative p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all"
-                :class="{ 'bg-slate-100 text-primary-600': showNotifications }"
+                class="relative p-3 text-slate-500 hover:bg-white hover:text-primary-600 rounded-2xl transition-all shadow-sm border border-transparent hover:border-slate-100 group"
+                :class="{ 'bg-white text-primary-600 shadow-lg border-primary-100': showNotifications }"
             >
-                <Bell class="w-5 h-5" />
-                <span v-if="unreadCount > 0" class="absolute top-1.5 right-1.5 w-2 h-2 bg-primary-500 rounded-full border-2 border-white"></span>
+                <Bell class="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                <span v-if="unreadCount > 0" class="absolute top-2.5 right-2.5 w-3 h-3 bg-secondary-500 rounded-full border-2 border-white animate-pulse"></span>
             </button>
 
-            <!-- Notifications Dropdown -->
-            <div v-if="showNotifications" class="absolute right-0 mt-3 w-80 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                <div class="p-4 border-b border-slate-200 flex items-center justify-between">
-                    <h3 class="font-bold text-sm text-slate-900">Notifications</h3>
-                    <button @click="markAllAsRead" class="text-xs text-primary-600 hover:text-primary-700 font-medium">Mark all as read</button>
-                </div>
-                <div class="max-h-96 overflow-y-auto">
-                    <div v-if="notifications.length === 0" class="p-8 text-center text-slate-400 italic text-sm">
-                        No new notifications
+            <!-- Notifications Dropdown (Premium) -->
+            <transition name="page">
+                <div v-if="showNotifications" class="absolute right-0 mt-4 w-96 bg-white/90 backdrop-blur-3xl border border-white/40 rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] z-50 overflow-hidden">
+                    <div class="p-6 border-b border-slate-100/50 flex items-center justify-between bg-slate-50/50">
+                        <h3 class="font-black text-xs text-slate-900 uppercase tracking-widest italic">Live Feed</h3>
+                        <button @click="markAllAsRead" class="text-[10px] text-primary-600 hover:text-primary-700 font-black uppercase tracking-widest underline">Mark All As Read</button>
                     </div>
-                    <div 
-                        v-for="notif in notifications" 
-                        :key="notif.id"
-                        class="p-4 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors relative group"
-                        :class="{ 'bg-primary-500/5': !notif.read }"
-                    >
-                        <div class="flex gap-3">
-                            <div class="w-8 h-8 rounded-full bg-primary-500/10 flex items-center justify-center flex-shrink-0">
-                                <Check v-if="notif.type === 'welcome'" class="w-4 h-4 text-primary-600" />
-                                <Bell v-else class="w-4 h-4 text-primary-600" />
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center justify-between">
-                                    <p class="text-xs font-bold text-slate-900 truncate">{{ notif.title }}</p>
-                                    <span class="text-[10px] text-slate-400">{{ notif.time }}</span>
-                                </div>
-                                <p class="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">{{ notif.message }}</p>
-                            </div>
+                    <div class="max-h-[30rem] overflow-y-auto custom-scrollbar">
+                        <div v-if="notifications.length === 0" class="p-10 text-center text-slate-400 italic text-sm font-medium">
+                            All caught up!
                         </div>
-                        <button @click="clearNotification(notif.id)" class="absolute top-4 right-1 opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-slate-900 transition-colors">
-                            <X class="w-3 h-3" />
-                        </button>
+                        <div 
+                            v-for="notif in notifications" 
+                            :key="notif.id"
+                            class="p-5 border-b border-slate-50 last:border-0 hover:bg-white transition-all relative group cursor-pointer"
+                            :class="{ 'bg-primary-500/5': !notif.read }"
+                        >
+                            <div class="flex gap-4">
+                                <div class="w-10 h-10 rounded-xl bg-primary-600 shadow-lg shadow-primary-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                    <Check v-if="notif.type === 'welcome'" class="w-5 h-5 text-white" />
+                                    <Bell v-else class="w-5 h-5 text-white" />
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <p class="text-xs font-black text-slate-900 truncate uppercase tracking-tight">{{ notif.title }}</p>
+                                        <span class="text-[9px] font-bold text-slate-400 uppercase">{{ notif.time }}</span>
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 font-medium line-clamp-2 leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">{{ notif.message }}</p>
+                                </div>
+                            </div>
+                            <button @click="clearNotification(notif.id)" class="absolute top-5 right-2 opacity-0 group-hover:opacity-100 p-1.5 text-slate-300 hover:text-rose-600 transition-colors">
+                                <X class="w-4 h-4" />
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </transition>
           </div>
 
-          <div class="h-8 w-px bg-slate-200"></div>
+          <div class="h-10 w-px bg-slate-200/50"></div>
           
           <!-- User Profile -->
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-primary-600 to-indigo-600 flex items-center justify-center text-sm font-bold text-white shadow-lg shadow-primary-500/20">
+          <div class="flex items-center gap-4 group cursor-pointer">
+            <div class="w-11 h-11 rounded-2xl bg-primary-600 flex items-center justify-center text-sm font-black text-white shadow-xl shadow-primary-500/30 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500">
               {{ userInitials }}
             </div>
             <div class="hidden md:block">
-              <div class="text-sm font-bold text-slate-900">{{ userName }}</div>
-              <div class="text-[10px] text-primary-600 font-bold uppercase tracking-wider">
+              <div class="text-sm font-black text-slate-900 leading-none mb-1 group-hover:text-primary-600 transition-colors uppercase tracking-tight">{{ userName }}</div>
+              <div class="text-[9px] text-secondary-600 font-black uppercase tracking-[0.2em] opacity-80">
                 {{ authStore.userRole || 'User' }}
               </div>
             </div>
@@ -162,15 +166,7 @@ onMounted(async () => {
       <!-- Page Content -->
       <main class="flex-1 p-8 overflow-y-auto w-full scrollbar-thin scrollbar-thumb-surface-800 scrollbar-track-transparent">
         <RouterView v-slot="{ Component }">
-          <transition 
-            enter-active-class="transition-all duration-300 ease-out" 
-            enter-from-class="opacity-0 translate-y-2" 
-            enter-to-class="opacity-100 translate-y-0" 
-            leave-active-class="transition-all duration-200 ease-in" 
-            leave-from-class="opacity-100" 
-            leave-to-class="opacity-0"
-            mode="out-in"
-          >
+          <transition name="page" mode="out-in">
             <component :is="Component" />
           </transition>
         </RouterView>

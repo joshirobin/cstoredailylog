@@ -37,8 +37,9 @@ export interface Invoice {
     locationId?: string;
 }
 
-import { db } from '../firebaseConfig';
+import { db, storage } from '../firebaseConfig';
 import { collection, getDocs, setDoc, updateDoc, doc, query, orderBy, deleteDoc, where } from 'firebase/firestore';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useLocationsStore } from './locations';
 
 export const useInvoicesStore = defineStore('invoices', () => {
@@ -82,6 +83,34 @@ export const useInvoicesStore = defineStore('invoices', () => {
 
         const id = `INV-${Date.now().toString().slice(-6)}`;
         try {
+            // Upload attachments to Storage first
+            const processedAttachments: Attachment[] = [];
+            if (invoice.attachments && invoice.attachments.length > 0) {
+                for (const att of invoice.attachments) {
+                    if (att.dataUrl.startsWith('data:')) {
+                        // It's a base64 data URL, upload to Storage
+                        try {
+                            const res = await fetch(att.dataUrl);
+                            const blob = await res.blob();
+                            const fileRef = storageRef(storage, `invoices/${id}/${att.name}`);
+                            const snapshot = await uploadBytes(fileRef, blob);
+                            const downloadUrl = await getDownloadURL(snapshot.ref);
+                            processedAttachments.push({
+                                ...att,
+                                dataUrl: downloadUrl
+                            });
+                        } catch (uploadErr) {
+                            console.error(`Failed to upload attachment ${att.name}:`, uploadErr);
+                            // Keep original dataUrl as fallback if upload fails, 
+                            // though this might still trigger Firestore limit.
+                            processedAttachments.push(att);
+                        }
+                    } else {
+                        processedAttachments.push(att);
+                    }
+                }
+            }
+
             await setDoc(doc(db, 'invoices', id), {
                 id,
                 accountId: invoice.accountId,
@@ -95,14 +124,11 @@ export const useInvoicesStore = defineStore('invoices', () => {
                 recipientEmail: invoice.recipientEmail,
                 locationId: locationsStore.activeLocationId,
                 items: invoice.items.map(i => ({ ...i })),
-                attachments: invoice.attachments || [],
+                attachments: processedAttachments,
                 createdAt: new Date().toISOString()
             });
 
             // Update Account Balance
-            // We need to import increment dynamically or at top-level. 
-            // It's cleaner to use the imported functions if available.
-            // Let's assume we can add update logic here.
             const { increment } = await import('firebase/firestore');
             const accountRef = doc(db, 'accounts', String(invoice.accountId));
             await updateDoc(accountRef, {
@@ -117,7 +143,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
         return id;
     };
 
-    const generateInvoicePDF = (invoice: Invoice) => {
+    const generateInvoicePDF = async (invoice: Invoice) => {
         const doc = new jsPDF();
         const primaryColor = [14, 165, 233] as [number, number, number];
 
@@ -170,7 +196,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
 
         // Add Attachments (Receipts) as additional pages
         if (invoice.attachments && invoice.attachments.length > 0) {
-            invoice.attachments.forEach((attachment) => {
+            for (const attachment of invoice.attachments) {
                 if (attachment.type.startsWith('image/')) {
                     doc.addPage();
                     // Add a small header for the attachment
@@ -179,8 +205,20 @@ export const useInvoicesStore = defineStore('invoices', () => {
                     doc.text(`Attachment: ${attachment.name}`, 14, 15);
 
                     try {
+                        let dataUrl = attachment.dataUrl;
+                        if (dataUrl.startsWith('http')) {
+                            // Fetch content if it's a URL
+                            const res = await fetch(dataUrl);
+                            const blob = await res.blob();
+                            dataUrl = await new Promise((resolve) => {
+                                const reader = new FileReader();
+                                reader.onloadend = () => resolve(reader.result as string);
+                                reader.readAsDataURL(blob);
+                            });
+                        }
+
                         // Fit image to page (approx 180mm wide, keeping aspect ratio)
-                        const imgProps = doc.getImageProperties(attachment.dataUrl);
+                        const imgProps = doc.getImageProperties(dataUrl);
                         const pageWidth = doc.internal.pageSize.getWidth();
                         const pageHeight = doc.internal.pageSize.getHeight();
                         const margin = 14;
@@ -202,7 +240,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
                             width = height * ratio;
                         }
 
-                        doc.addImage(attachment.dataUrl, 'JPEG', margin, 25, width, height);
+                        doc.addImage(dataUrl, 'JPEG', margin, 25, width, height);
                     } catch (e) {
                         console.error('Failed to add image to PDF:', e);
                         doc.setFontSize(10);
@@ -210,14 +248,14 @@ export const useInvoicesStore = defineStore('invoices', () => {
                         doc.text('Error: Could not render image attachment.', 14, 25);
                     }
                 }
-            });
+            }
         }
 
         return doc;
     };
 
-    const downloadInvoicePDF = (invoice: Invoice) => {
-        const doc = generateInvoicePDF(invoice);
+    const downloadInvoicePDF = async (invoice: Invoice) => {
+        const doc = await generateInvoicePDF(invoice);
         doc.save(`${invoice.id}_${invoice.accountName.split(' ')[0]}.pdf`);
     };
 
@@ -226,21 +264,25 @@ export const useInvoicesStore = defineStore('invoices', () => {
             const reader = new FileReader();
             reader.onload = async (e) => {
                 const dataUrl = e.target?.result as string;
-                const attachment: Attachment = {
-                    id: Math.random().toString(36).substr(2, 9),
-                    name: file.name,
-                    size: file.size,
-                    type: file.type,
-                    dataUrl
-                };
 
                 // Update Firestore
                 try {
+                    // Upload to Storage
+                    const response = await fetch(dataUrl);
+                    const blob = await response.blob();
+                    const fileRef = storageRef(storage, `invoices/${invoiceId}/${file.name}`);
+                    await uploadBytes(fileRef, blob);
+                    const downloadUrl = await getDownloadURL(fileRef);
+
+                    const attachment: Attachment = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        name: file.name,
+                        size: file.size,
+                        type: file.type,
+                        dataUrl: downloadUrl
+                    };
+
                     const invoiceRef = doc(db, 'invoices', invoiceId);
-                    // We need to get the current attachments first or use arrayUnion
-                    // But arrayUnion with large objects (base64) is fine?
-                    // Let's just find the local invoice and update it then save whole array or use arrayUnion
-                    // arrayUnion is safer for concurrency
                     const { arrayUnion } = await import('firebase/firestore');
                     await updateDoc(invoiceRef, {
                         attachments: arrayUnion(attachment)
@@ -281,12 +323,15 @@ export const useInvoicesStore = defineStore('invoices', () => {
         }
     };
 
-    const sendInvoiceEmail = async (invoiceId: string, recipientEmail: string): Promise<boolean> => {
+    const sendInvoiceEmail = async (invoiceId: string, recipientEmail: string, invoiceOverride?: Invoice): Promise<boolean> => {
         try {
-            const invoice = invoices.value.find(inv => inv.id === invoiceId);
-            if (!invoice) return false;
+            const invoice = invoiceOverride || invoices.value.find(inv => inv.id === invoiceId);
+            if (!invoice) {
+                console.error(`Send Email failed: Invoice ${invoiceId} not found.`);
+                throw new Error('Invoice not found. Please try again or refresh.');
+            }
 
-            const pdfDoc = generateInvoicePDF(invoice);
+            const pdfDoc = await generateInvoicePDF(invoice);
             const pdfBase64 = pdfDoc.output('datauristring');
 
             const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001'}/api/send-email`, {
@@ -316,7 +361,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
                 throw new Error(err.error || 'Failed to send email');
             }
 
-            const invoiceRef = doc(db, 'invoices', invoiceId);
+            const invoiceRef = doc(db, 'invoices', invoice.id);
             await updateDoc(invoiceRef, {
                 emailSent: true,
                 sentDate: new Date().toISOString(),

@@ -167,7 +167,7 @@ onMounted(async () => {
         openingCash.value = existingLog.openingCash;
         closingCash.value = existingLog.closingCash;
         safeDrops.value = existingLog.safeCash || 0;
-        expenses.value = existingLog.expenses;
+        expenses.value = existingLog.expenses || 0;
         checks.value = existingLog.checks || [];
         notes.value = existingLog.notes || '';
     } else {

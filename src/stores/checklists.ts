@@ -46,6 +46,7 @@ export interface ChecklistSubmission {
     templateId: string;
     role: string;
     responses: Record<string, any>;
+    photos?: Record<string, string>;
     progress: number;
     status: 'IN_PROGRESS' | 'COMPLETED';
     submittedAt: Timestamp | null;
@@ -97,8 +98,8 @@ export const CASHIER_TEMPLATE: ChecklistTemplate = {
             title: "Cleanliness & Sanitation",
             tasks: [
                 { task_id: "disinfect_counter", label: "Disinfect counter, POS, card reader, and lotto terminal", required: true, type: "boolean" },
-                { task_id: "clean_coffee_fountain", label: "Wipe coffee/fountain machines, clean drip trays", required: true, type: "boolean" },
-                { task_id: "sweep_mop", label: "Sweep entire store, mop wet/dirty areas", required: true, type: "boolean" },
+                { task_id: "clean_coffee_fountain", label: "Wipe coffee/fountain machines, clean drip trays", required: true, type: "boolean", hasAttachment: true },
+                { task_id: "sweep_mop", label: "Sweep entire store, mop wet/dirty areas", required: true, type: "boolean", hasAttachment: true },
                 { task_id: "empty_trash", label: "Empty all interior trash before overflow", required: true, type: "boolean" }
             ]
         },
@@ -173,7 +174,7 @@ export const KITCHEN_TEMPLATE: ChecklistTemplate = {
             section_id: "closing",
             title: "Kitchen Closing",
             tasks: [
-                { task_id: "deep_clean", label: "Deep clean surfaces", required: true, type: "boolean" },
+                { task_id: "deep_clean", label: "Deep clean surfaces", required: true, type: "boolean", hasAttachment: true },
                 { task_id: "waste_report", label: "Submit food waste report", required: true, type: "comment" }
             ]
         }

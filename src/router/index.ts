@@ -7,6 +7,7 @@ import { useAuthStore } from '../stores/auth'
 const LoginView = () => import('../views/auth/LoginView.vue')
 const SignUpView = () => import('../views/auth/SignUpView.vue')
 const ForgotPasswordView = () => import('../views/auth/ForgotPasswordView.vue')
+const VerifyEmailView = () => import('../views/auth/VerifyEmailView.vue')
 const DashboardLayout = () => import('../layout/DashboardLayout.vue')
 const DashboardView = () => import('../views/dashboard/DashboardView.vue')
 const DailySalesView = () => import('../views/operations/DailySalesView.vue')
@@ -35,6 +36,23 @@ const router = createRouter({
             component: ForgotPasswordView
         },
         {
+            path: '/verify-email',
+            name: 'verify-email',
+            component: VerifyEmailView,
+            meta: { requiresAuth: true }
+        },
+        {
+            path: '/email-verified',
+            name: 'email-verified',
+            component: () => import('../views/auth/EmailConfirmationView.vue')
+        },
+        {
+            path: '/store-selection',
+            name: 'store-selection',
+            component: () => import('../views/locations/StoreSelectionView.vue'),
+            meta: { requiresAuth: true }
+        },
+        {
             path: '/',
             component: DashboardLayout,
             meta: { requiresAuth: true },
@@ -59,6 +77,7 @@ const router = createRouter({
                 { path: 'lottery/inventory', name: 'lottery-inventory', component: () => import('../views/lottery/LotteryInventoryView.vue') },
                 { path: 'lottery/reconciliation', name: 'lottery-reconciliation', component: () => import('../views/lottery/DailyReconciliationView.vue') },
                 { path: 'lottery/settlement', name: 'lottery-settlement', component: () => import('../views/lottery/LotterySettlementView.vue') },
+                { path: 'lottery/analytics', name: 'lottery-analytics', component: () => import('../views/lottery/LotteryAnalyticsView.vue') },
 
                 // Employee Management & Operations
                 { path: 'employees', name: 'employees', component: () => import('../views/employees/EmployeesView.vue') },
@@ -74,13 +93,20 @@ const router = createRouter({
                 { path: 'journal', name: 'journal', component: () => import('../views/operations/OperationsJournalView.vue') },
                 { path: 'vendor-checkin', name: 'vendor-checkin', component: () => import('../views/operations/VendorCheckinView.vue') },
                 { path: 'food-safety', name: 'food-safety', component: () => import('../views/operations/TemperatureLogView.vue') },
-                { path: 'competitor-watch', name: 'competitor-watch', component: () => import('../views/operations/CompetitorWatchView.vue') },
                 { path: 'lottery-shrinkage', name: 'lottery-shrinkage', component: () => import('../views/lottery/LotteryShrinkageView.vue') },
                 { path: 'cash-flow', name: 'cash-flow', component: () => import('../views/operations/CashFlowPredictorView.vue') },
                 { path: 'food-waste', name: 'food-waste', component: () => import('../views/operations/FoodWasteView.vue') },
                 { path: 'sops', name: 'sops', component: () => import('../views/employees/EmployeeSOPView.vue') },
+                { path: 'tobacco-scan', name: 'tobacco-scan', component: () => import('../views/operations/TobaccoScanView.vue') },
+                { path: 'fuel-optimizer', name: 'fuel-optimizer', component: () => import('../views/operations/FuelOptimizerView.vue') },
+                { path: 'fuel-delivery', name: 'fuel-delivery', component: () => import('../views/operations/FuelDeliveryView.vue') },
+                { path: 'visual-audit', name: 'visual-audit', component: () => import('../views/operations/VisualAuditView.vue') },
+                { path: 'liquor-tracking', name: 'liquor-tracking', component: () => import('../views/operations/LiquorTrackingView.vue') },
+                { path: 'price-model', name: 'price-model', component: () => import('../views/operations/PriceModelView.vue') },
                 { path: 'settings', name: 'settings', component: () => import('../views/settings/StoreSettingsView.vue') },
-                { path: 'access-control', name: 'access-control', component: () => import('../views/admin/AccessControlView.vue') }
+                { path: 'settings/user-access', name: 'user-access', component: () => import('../views/settings/UserAccessView.vue') },
+                { path: 'access-control', name: 'access-control', component: () => import('../views/admin/AccessControlView.vue') },
+                { path: 'analytics/forecasting', name: 'forecasting', component: () => import('../views/analytics/ForecastingView.vue') }
             ]
         }
     ]
@@ -118,7 +144,24 @@ router.beforeEach(async (to, _from, next) => {
 
     if (requiresAuth) {
         if (authStore.user || authStore.isDemo) {
-            // Check permissions
+            // Check verification status (skip for demo users)
+            if (!authStore.isDemo && authStore.user && !authStore.user.emailVerified) {
+                if (to.name !== 'verify-email') {
+                    next({ name: 'verify-email' })
+                    return
+                }
+            } else if (to.name === 'verify-email' && (authStore.isDemo || (authStore.user && authStore.user.emailVerified))) {
+                // If verified or demo, don't stay on verification page
+                next('/')
+                return
+            }
+
+            // Check permissions (skip permission check for verify-email)
+            if (to.name === 'verify-email') {
+                next()
+                return
+            }
+
             const canVisit = authStore.canVisit(to.name as string)
 
             if (!canVisit) {

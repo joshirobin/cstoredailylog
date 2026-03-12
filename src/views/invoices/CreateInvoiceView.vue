@@ -238,7 +238,20 @@ const sendEmail = async () => {
       throw new Error('Failed to create invoice before sending.');
     }
 
-    const success = await invoicesStore.sendInvoiceEmail(invoiceId, recipientEmail.value);
+    const success = await invoicesStore.sendInvoiceEmail(invoiceId, recipientEmail.value, {
+      id: invoiceId,
+      accountId: selectedAccountId.value as string,
+      accountName: account.name,
+      date: (date.value || new Date().toISOString().split('T')[0]) as string,
+      dueDate: (dueDate.value || '') as string,
+      items: items.value.map(i => ({ ...i })),
+      subtotal: subtotal.value,
+      tax: tax.value,
+      total: grandTotal.value,
+      status: 'Sent',
+      attachments: attachments.value
+    } as any);
+
     if (success) {
       emailSent.value = true;
       setTimeout(() => {

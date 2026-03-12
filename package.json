@@ -9,12 +9,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@googlemaps/js-api-loader": "^2.0.2",
     "@vueuse/core": "^14.1.0",
     "chart.js": "^4.5.1",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "firebase": "^12.8.0",
+    "html5-qrcode": "^2.3.8",
     "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.7",
     "knex": "^3.1.0",
@@ -33,6 +36,7 @@
     "@tailwindcss/postcss": "^4.1.18",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/google.maps": "^3.58.1",
     "@types/node": "^24.10.9",
     "@types/nodemailer": "^7.0.5",
     "@types/pg": "^8.16.0",

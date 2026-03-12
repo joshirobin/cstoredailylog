@@ -2,8 +2,8 @@
 import { onMounted, computed, ref } from 'vue';
 import { useLotteryStore } from '../../stores/lottery';
 import { 
-  Layers, 
   AlertTriangle, 
+  Layers,
   DollarSign, 
   Plus, 
   ClipboardCheck, 
@@ -12,12 +12,18 @@ import {
   Ticket,
   History,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  RotateCcw,
+  Bell,
+  BarChart3,
+  WifiOff
 } from 'lucide-vue-next';
 import { useRouter } from 'vue-router';
+import { useNetwork } from '@vueuse/core';
 
 const lotteryStore = useLotteryStore();
 const router = useRouter();
+const { isOnline } = useNetwork();
 
 onMounted(async () => {
     await Promise.all([
@@ -30,6 +36,7 @@ onMounted(async () => {
 const activeBookCount = computed(() => lotteryStore.activeBooks.length);
 const pendingSettlementsCount = computed(() => lotteryStore.pendingSettlements.length);
 const inStockCount = computed(() => lotteryStore.inStockBooks.length);
+const returnedCount = computed(() => lotteryStore.returnedBooks.length);
 
 const totalActiveValue = computed(() => {
     return lotteryStore.activeBooks.reduce((sum, book) => {
@@ -93,10 +100,83 @@ const groupedHistory = computed(() => {
     });
 });
 
+// --- Automated Alerts ---
+const alerts = computed(() => {
+    const list: { id: string, type: string, message: string, urgency: 'high' | 'medium' | 'low', link: string }[] = [];
+
+    // 1. Low stock alerts (<20% remaining)
+    lotteryStore.activeBooks.forEach(book => {
+        const remaining = book.ticketEnd - book.currentTicket;
+        const total = book.ticketEnd - book.ticketStart;
+        if (total > 0 && (remaining / total) <= 0.20 && remaining > 0) {
+            list.push({
+                id: `stock-${book.id}`,
+                type: 'low_stock',
+                message: `Pack #${book.bookNumber} (${book.gameName || 'Unknown'}) is running low (${remaining} tickets left).`,
+                urgency: remaining <= 5 ? 'high' : 'medium',
+                link: '/lottery/inventory'
+            });
+        }
+    });
+
+    // 2. Settlement reminders
+    lotteryStore.pendingSettlements.forEach(book => {
+         list.push({
+             id: `settle-${book.id}`,
+             type: 'settlement',
+             message: `Pack #${book.bookNumber} is sold out and needs to be settled.`,
+             urgency: 'high',
+             link: '/lottery/settlement'
+         });
+    });
+
+    // 3. Variance threshold alerts (>$50) - recent 7 days
+    lotteryStore.history.filter(h => Math.abs(h.varianceAmount || 0) > 50).forEach(v => {
+        const daysOld = (new Date().getTime() - new Date(v.date).getTime()) / (1000 * 3600 * 24);
+        if (daysOld <= 7) {
+            // Wait, we need the book number. Let's find it.
+            const book = lotteryStore.books.find(b => b.id === v.bookId);
+            list.push({
+                id: `var-${v.id}`,
+                type: 'variance',
+                message: `High variance ($${Math.abs(v.varianceAmount).toFixed(2)}) detected on ${v.date} for Pack #${book?.bookNumber || 'Unknown'}.`,
+                urgency: 'high',
+                link: '/lottery/analytics'
+            });
+        }
+    });
+
+    // 4. Game expiration warnings
+    lotteryStore.inStockBooks.forEach(book => {
+        if (book.receivedDate && book.receivedDate.seconds) {
+            const daysOld = (new Date().getTime() - (book.receivedDate.seconds * 1000)) / (1000 * 3600 * 24);
+            if (daysOld > 90) {
+                 list.push({
+                     id: `exp-${book.id}`,
+                     type: 'expiration',
+                     message: `Pack #${book.bookNumber} was received over 90 days ago. Consider activating or returning.`,
+                     urgency: 'medium',
+                     link: '/lottery/inventory'
+                 });
+            }
+        }
+    });
+
+    // Sort by urgency: high (2), medium (1), low (0)
+    const urgencyScore = { high: 2, medium: 1, low: 0 };
+    return list.sort((a, b) => urgencyScore[b.urgency] - urgencyScore[a.urgency]);
+});
+
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto space-y-8 pb-12">
+  <div class="max-w-7xl mx-auto space-y-8 pb-12 relative">
+    <!-- Offline Indicator -->
+    <div v-if="!isOnline" class="bg-amber-500 text-white px-4 py-3 rounded-xl flex items-center justify-center gap-2 mb-6 shadow-lg shadow-amber-500/20 font-black uppercase tracking-widest text-xs animate-pulse sticky top-4 z-50">
+        <WifiOff class="w-4 h-4" />
+        Offline Mode - Operations will sync when reconnected
+    </div>
+
     <!-- Header -->
     <div class="flex items-center justify-between">
         <div>
@@ -112,8 +192,50 @@ const groupedHistory = computed(() => {
         </button>
     </div>
 
+    <!-- Automated Alerts Section -->
+    <div v-if="alerts.length > 0" class="glass-panel p-6 border-l-4 border-l-amber-500">
+        <div class="flex items-center gap-2 mb-4">
+            <Bell class="w-5 h-5 text-amber-500" />
+            <h3 class="font-bold font-display text-slate-900 uppercase italic">Action Required</h3>
+            <span class="ml-2 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-black">{{ alerts.length }}</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div 
+                v-for="alert in alerts.slice(0, 4)" 
+                :key="alert.id"
+                @click="router.push(alert.link)"
+                class="flex items-start gap-4 p-4 rounded-xl cursor-pointer transition-colors border"
+                :class="{
+                    'bg-rose-50/50 border-rose-100 hover:bg-rose-50': alert.urgency === 'high',
+                    'bg-amber-50/50 border-amber-100 hover:bg-amber-50': alert.urgency === 'medium',
+                    'bg-slate-50 border-slate-100 hover:bg-slate-100': alert.urgency === 'low'
+                }"
+            >
+                <AlertTriangle v-if="alert.urgency === 'high'" class="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                <AlertTriangle v-else-if="alert.urgency === 'medium'" class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                <AlertTriangle v-else class="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
+                
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider mb-1" 
+                        :class="{
+                            'text-rose-700': alert.urgency === 'high',
+                            'text-amber-700': alert.urgency === 'medium',
+                            'text-slate-700': alert.urgency === 'low'
+                        }">
+                        {{ alert.type.replace('_', ' ') }}
+                    </h4>
+                    <p class="text-xs text-slate-600 font-medium">{{ alert.message }}</p>
+                </div>
+            </div>
+            
+            <div v-if="alerts.length > 4" class="p-4 flex items-center justify-center rounded-xl bg-slate-50 border border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-widest cursor-pointer hover:bg-slate-100">
+                + {{ alerts.length - 4 }} More Alerts
+            </div>
+        </div>
+    </div>
+
     <!-- Quick Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         <div class="glass-panel p-6 flex flex-col justify-between group cursor-pointer" @click="router.push('/lottery/inventory')">
             <div class="flex items-start justify-between">
                 <div>
@@ -173,6 +295,22 @@ const groupedHistory = computed(() => {
             </div>
              <div class="mt-4 flex items-center gap-2 text-xs font-bold text-slate-400">
                 <span>Books ready to activate</span>
+            </div>
+        </div>
+
+        <div class="glass-panel p-6 flex flex-col justify-between group cursor-pointer" @click="router.push('/lottery/inventory?tab=return')">
+            <div class="flex items-start justify-between">
+                <div>
+                   <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Returned Packs</p>
+                   <p class="text-4xl font-black text-rose-500 tracking-tighter mt-1">{{ returnedCount }}</p>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform">
+                    <RotateCcw class="w-5 h-5" />
+                </div>
+            </div>
+             <div class="mt-4 flex items-center gap-2 text-xs font-bold text-rose-500">
+                <span class="px-2 py-0.5 bg-rose-100 rounded text-[9px] uppercase tracking-wider">Audit</span>
+                <span class="text-slate-400">Sent back</span>
             </div>
         </div>
     </div>
@@ -307,10 +445,13 @@ const groupedHistory = computed(() => {
                 <p class="text-xs text-slate-400 mt-1">Finalize sold out packs</p>
             </button>
 
-             <button class="w-full p-4 rounded-2xl bg-slate-900 text-white hover:bg-slate-800 hover:shadow-lg transition-all text-left group flex items-center justify-between">
+             <button @click="router.push('/lottery/analytics')" class="w-full p-4 rounded-2xl bg-slate-900 text-white hover:bg-slate-800 hover:shadow-lg transition-all text-left group flex items-center justify-between">
                 <div>
-                    <h4 class="font-bold text-white uppercase text-sm">Online Reports</h4>
-                    <p class="text-xs text-slate-400 mt-1">Sync terminal data</p>
+                    <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-white mb-3 group-hover:scale-110 transition-transform">
+                        <BarChart3 class="w-5 h-5" />
+                    </div>
+                    <h4 class="font-bold text-white uppercase text-sm">Analytics & Reports</h4>
+                    <p class="text-xs text-slate-400 mt-1">Sales trends & insights</p>
                 </div>
                 <ArrowRight class="w-5 h-5 text-slate-500 group-hover:text-white transition-colors" />
             </button>

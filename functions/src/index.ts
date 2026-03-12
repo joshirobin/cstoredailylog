@@ -47,16 +47,36 @@ async function handleSendEmail(req: any, res: any) {
             to,
             subject,
             text: body,
-            html: body.replace(/\\n/g, "<br>"),
+            html: body.replace(/\n/g, "<br>"),
         };
 
         if (attachments && Array.isArray(attachments)) {
-            mailOptions.attachments = attachments.map((att: any) => ({
-                filename: att.name,
-                content: att.data.split("base64,")[1],
-                encoding: "base64",
-                contentType: att.type,
-            }));
+            logger.info(`Processing ${attachments.length} attachments`);
+            mailOptions.attachments = attachments.map((att: any, index: number) => {
+                const isBase64 = att.data && att.data.includes("base64,");
+                const isUrl = att.data && (att.data.startsWith("http://") || att.data.startsWith("https://"));
+
+                if (isUrl) {
+                    return {
+                        filename: att.name,
+                        path: att.data,
+                        contentType: att.type
+                    };
+                }
+
+                const content = isBase64 ? att.data.split("base64,")[1] : att.data;
+
+                if (!content) {
+                    logger.warn(`Attachment ${index} (${att.name}) has no content after split`);
+                }
+
+                return {
+                    filename: att.name,
+                    content: content,
+                    encoding: isBase64 ? "base64" : undefined,
+                    contentType: att.type,
+                };
+            });
         }
 
         const info = await transporter.sendMail(mailOptions);

@@ -14,7 +14,7 @@ import {
 } from 'firebase/auth';
 import { useRouter } from 'vue-router';
 import { db } from '../firebaseConfig';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { usePermissionsStore } from './permissions';
 
 export const useAuthStore = defineStore('auth', () => {
@@ -44,6 +44,33 @@ export const useAuthStore = defineStore('auth', () => {
         } catch (error) {
             console.error('Failed to fetch user role:', error);
             userRole.value = 'Cashier';
+        }
+    };
+
+    const logAccess = async (userObj: any) => {
+        if (isDemo.value) return;
+        try {
+            let ipAddress = 'Unknown';
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                ipAddress = data.ip;
+            } catch (e) {
+                console.warn('Could not fetch IP address:', e);
+            }
+
+            await addDoc(collection(db, 'access_logs'), {
+                uid: userObj.uid,
+                email: userObj.email,
+                displayName: userObj.displayName || 'Anonymous',
+                ipAddress,
+                timestamp: serverTimestamp(),
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                locationId: (await import('./locations')).useLocationsStore().activeLocationId || 'None'
+            });
+        } catch (error) {
+            console.error('Failed to log access:', error);
         }
     };
 
@@ -84,6 +111,23 @@ export const useAuthStore = defineStore('auth', () => {
             if (result.user.email) {
                 await fetchUserRole(result.user.email);
                 await permissionsStore.fetchPermissions();
+                await logAccess(result.user);
+
+                // Role-based redirect
+                if (!isDemo.value) {
+                    if (userRole.value === 'Cashier' || userRole.value === 'Stock Associate') {
+                        router.push('/clerk');
+                        return;
+                    } else if (userRole.value === 'Shift Manager') {
+                        router.push('/time-clock'); // Or tasks
+                        return;
+                    } else {
+                        router.push('/store-selection');
+                        return;
+                    }
+                } else {
+                    router.push('/store-selection');
+                }
             }
         } catch (error: any) {
             loading.value = false;
@@ -114,7 +158,7 @@ export const useAuthStore = defineStore('auth', () => {
             userRole.value = 'Admin';
         }
         loading.value = false;
-        router.push('/');
+        router.push('/store-selection');
     };
 
     const logout = async () => {
@@ -143,26 +187,61 @@ export const useAuthStore = defineStore('auth', () => {
 
     const register = async (email: string, pass: string, name: string, role: string = 'Admin') => {
         try {
+            // Check for existing employee record BEFORE creating auth user?
+            // Actually better to do it after to start fresh, or during merge.
+            // But we need to find it by email.
+
             const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
             await updateProfile(userCredential.user, {
                 displayName: name
             });
-            await sendEmailVerification(userCredential.user);
-
-            // Save employee profile with selected role to Firestore
-            const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
-            await setDoc(doc(db, 'employees', userCredential.user.uid), {
-                name,
-                email,
-                role,
-                createdAt: serverTimestamp(),
-                uid: userCredential.user.uid,
-                status: 'Active'
+            await sendEmailVerification(userCredential.user, {
+                url: window.location.origin + '/email-verified'
             });
+
+            // Check if there is an existing employee record (created by Admin)
+            const employeesRef = collection(db, 'employees');
+            const q = query(employeesRef, where('email', '==', email));
+            const querySnapshot = await getDocs(q);
+
+            let existingData = {};
+            let oldDocId = null;
+
+            if (!querySnapshot.empty && querySnapshot.docs.length > 0) {
+                const oldDoc = querySnapshot.docs[0];
+                if (oldDoc) {
+                    existingData = oldDoc.data();
+                    oldDocId = oldDoc.id;
+                    console.log('Found existing employee record:', oldDocId, existingData);
+                }
+            }
+
+            // Save/Update employee profile
+            // We use the Auth UID as the document ID for the final record
+            const newDocRef = doc(db, 'employees', userCredential.user.uid);
+
+            await setDoc(newDocRef, {
+                ...existingData, // Preserve existing admin-set data (hourlyRate, position, etc)
+                name, // Update name if user provided a better one? Or keep admin's? Let's authorize user's input for name
+                email,
+                role: (existingData as any).role || role, // Prefer existing role if set by admin
+                createdAt: (existingData as any).createdAt || serverTimestamp(),
+                uid: userCredential.user.uid,
+                status: 'Active',
+                // Ensure critical fields are set if missing
+                firstName: name.split(' ')[0] || (existingData as any).firstName || '',
+                lastName: name.split(' ').slice(1).join(' ') || (existingData as any).lastName || ''
+            });
+
+            // If we migrated from an old doc, delete the old one to avoid duplicates
+            if (oldDocId && oldDocId !== userCredential.user.uid) {
+                await deleteDoc(doc(db, 'employees', oldDocId));
+                console.log('Deleted old employee record:', oldDocId);
+            }
 
             // Force refresh user in store
             user.value = userCredential.user;
-            userRole.value = role;
+            userRole.value = (existingData as any).role || role;
             await permissionsStore.fetchPermissions();
         } catch (error: any) {
             throw error;
@@ -185,7 +264,9 @@ export const useAuthStore = defineStore('auth', () => {
 
     const resendVerificationEmail = async () => {
         if (auth.currentUser && !auth.currentUser.emailVerified) {
-            await sendEmailVerification(auth.currentUser);
+            await sendEmailVerification(auth.currentUser, {
+                url: window.location.origin + '/email-verified'
+            });
         }
     };
 

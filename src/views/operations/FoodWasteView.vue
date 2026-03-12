@@ -412,7 +412,7 @@ const categoryDistribution = computed(() => {
                               <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Quantity Lost</label>
                               <div class="flex gap-4">
                                 <input v-model.number="item.quantity" type="number" @input="calculateItemTotal(item)"
-                                       class="w-full h-14 bg-slate-50 border-2 border-slate-50 rounded-2xl px-6 text-sm font-black outline-none focus:bg-white focus:border-rose-500 transition-all no-spinner" />
+                                       class="flex-1 h-14 bg-slate-50 border-2 border-slate-50 rounded-2xl px-6 text-sm font-black outline-none focus:bg-white focus:border-rose-500 transition-all no-spinner" />
                                 <select v-model="item.unit" class="w-28 h-14 bg-slate-50 border-2 border-slate-50 rounded-2xl px-4 text-[10px] font-black uppercase outline-none focus:bg-white focus:border-rose-500 transition-all">
                                   <option v-for="u in units" :key="u" :value="u">{{ u }}</option>
                                 </select>
@@ -428,7 +428,7 @@ const categoryDistribution = computed(() => {
                                   <input v-model.number="item.costPerUnit" type="number" step="0.01" @input="calculateItemTotal(item)"
                                          class="w-full h-14 bg-slate-50 border-2 border-slate-50 rounded-2xl pl-10 pr-6 text-sm font-bold outline-none focus:bg-white focus:border-rose-500 transition-all no-spinner" />
                                 </div>
-                                <select v-model="item.reason" class="w-full h-14 bg-slate-50 border-2 border-slate-50 rounded-2xl px-4 text-[10px] font-black uppercase outline-none focus:bg-white focus:border-rose-500 transition-all">
+                                <select v-model="item.reason" class="flex-1 h-14 bg-slate-50 border-2 border-slate-50 rounded-2xl px-4 text-[10px] font-black uppercase outline-none focus:bg-white focus:border-rose-500 transition-all">
                                   <option v-for="r in reasons" :key="r" :value="r">{{ r }}</option>
                                 </select>
                               </div>

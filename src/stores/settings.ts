@@ -14,6 +14,7 @@ export interface StoreSettings {
     longitude?: number;
     locationId: string;
     lastUpdated?: string;
+    disabledFeatures?: string[];
 }
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -25,7 +26,8 @@ export const useSettingsStore = defineStore('settings', () => {
         zipCode: '75201',
         latitude: 32.7767,
         longitude: -96.7970,
-        locationId: ''
+        locationId: '',
+        disabledFeatures: []
     });
     const loading = ref(false);
 

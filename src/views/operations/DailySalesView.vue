@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { useSalesStore, type DenominationCounts, type Check, type SalesLog } from '../../stores/sales';
+import { useSalesStore, type DenominationCounts, type SalesLog } from '../../stores/sales';
 import { 
   Save, AlertCircle, History as HistoryIcon, 
-  Plus, Trash2, Vault, DollarSign, Calendar, 
-  Edit3, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
-  TrendingUp, Wallet, Receipt,
+  Trash2, Calendar, 
+  Edit3, ChevronLeft, ChevronRight,
+  TrendingUp, Wallet,
   Sparkles, Clock, Calculator, Loader2,
   Paperclip, FileText, CheckCircle2
 } from 'lucide-vue-next';
 import CashDenominations from '../../components/CashDenominations.vue';
+import DailyReconciliationForm from './components/DailyReconciliationForm.vue';
+import PdiReconciliationForm from './components/PdiReconciliationForm.vue';
 import { storage } from '../../firebaseConfig';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useNotificationStore } from '../../stores/notifications';
@@ -21,18 +23,21 @@ onMounted(async () => {
     checkExistingLog();
 });
 
-const openingCash = ref<number>(0);
-const closingCash = ref<number>(0);
+const currentLogForm = ref<Partial<SalesLog>>({
+    openingCash: 0, closingCash: 0, safeCash: 0, expenses: 0, checks: [], notes: '',
+    creditCardSummary: { visa: 0, mastercard: 0, amex: 0, discover: 0, other: 0, total: 0 },
+    fuelSalesSummary: { regularGallons: 0, regularSales: 0, premiumGallons: 0, premiumSales: 0, dieselGallons: 0, dieselSales: 0, total: 0 },
+    lotteryReconciliation: { openingBalance: 0, lotterySales: 0, lotteryPaidOut: 0, settlementsPaid: 0, endingBalance: 0 },
+    safeReconciliation: { openingSafeBalance: 0, cashDrops: 0, cashRemoved: 0, endingSafeBalance: 0 },
+    paidOutLog: [],
+    depositSummary: { cashDeposit: 0, coins: 0, total: 0, depositBagNumber: '' },
+    posZReportSummary: { insideSales: 0, fuelSales: 0, lotterySales: 0, totalSales: 0 },
+    signatures: { cashierSignature: '', managerSignature: '', date: '' },
+    cashSales: 0, lotteryCashSales: 0, safeCashAdded: 0, otherCashIn: 0, safeDrops: 0, lotteryPaidOut: 0, bankDeposit: 0, otherCashOut: 0
+});
 const openingDetails = ref<DenominationCounts | undefined>(undefined);
 const closingDetails = ref<DenominationCounts | undefined>(undefined);
-
-// Safe Deposit
-const safeCash = ref<number>(0);
 const safeDetails = ref<DenominationCounts | undefined>(undefined);
-const checks = ref<Check[]>([]);
-
-const expenses = ref<number>(0); 
-const notes = ref('');
 const isSubmitting = ref(false);
 const isUploading = ref(false);
 const notificationStore = useNotificationStore();
@@ -45,7 +50,7 @@ const otherFile = ref<File | null>(null);
 
 // UI Expansion State
 const activeAuditType = ref<'opening' | 'closing' | 'safe' | null>(null);
-const isSafeExpanded = ref(false);
+
 
 // Date Navigation for Logic
 const selectedDate = ref<string>(new Date().toISOString().split('T')[0] as string);
@@ -71,7 +76,7 @@ const checkExistingLog = () => {
            .sort((a, b) => b.date.localeCompare(a.date))[0];
        
        if (prevLog && prevLog.closingCash !== undefined) {
-           openingCash.value = prevLog.closingCash;
+           currentLogForm.value.openingCash = prevLog.closingCash;
            openingDetails.value = JSON.parse(JSON.stringify(prevLog.closingDenominations || { bills: {}, coins: {} }));
             notificationStore.info(`Carried over $${prevLog.closingCash.toFixed(2)} from ${prevLog.date}`, "Data Sync");
         }
@@ -99,16 +104,20 @@ const expandedLogIds = ref<Set<string>>(new Set());
 const deleteConfirmLogId = ref<string | null>(null);
 
 const dailySales = computed(() => {
-  return (closingCash.value - openingCash.value) - expenses.value;
+  if (currentLogForm.value.pdiForm) {
+      return (currentLogForm.value.pdiForm.taxableSales || 0) + 
+             (currentLogForm.value.pdiForm.nonTaxable || 0) + 
+             (currentLogForm.value.pdiForm.salesTax || 0) + 
+             (currentLogForm.value.pdiForm.fuelSalesTotal || 0) + 
+             (currentLogForm.value.pdiForm.lotterySales || 0) + 
+             (currentLogForm.value.pdiForm.otherSales || 0);
+  }
+  return ((currentLogForm.value.closingCash || 0) - (currentLogForm.value.openingCash || 0)) - (currentLogForm.value.expenses || 0);
 });
 
-const checksTotal = computed(() => {
-  return checks.value.reduce((sum, check) => sum + (check.amount || 0), 0);
-});
 
-const safeTotal = computed(() => {
-  return safeCash.value + checksTotal.value;
-});
+
+
 
 // Filtered logs based on date range
 const filteredLogs = computed(() => {
@@ -151,17 +160,14 @@ const toggleLogExpansion = (logId: string) => {
 const loadLogForEditing = (log: SalesLog) => {
     editingLogId.value = log.id;
     selectedDate.value = log.date;
-    openingCash.value = log.openingCash;
-    closingCash.value = log.closingCash;
+    currentLogForm.value = JSON.parse(JSON.stringify(log));
     openingDetails.value = log.openingDenominations;
     closingDetails.value = log.closingDenominations;
-    safeCash.value = log.safeCash || 0;
     safeDetails.value = log.safeCashDetails;
-    checks.value = log.checks || [];
-    expenses.value = log.expenses || 0;
-    notes.value = log.notes || '';
     lottoUrl.value = log.lottoUrl || '';
     otherUrl.value = log.otherUrl || '';
+    lottoFile.value = null;
+    otherFile.value = null;
 };
 
 const cancelEdit = () => {
@@ -170,15 +176,21 @@ const cancelEdit = () => {
 };
 
 const resetForm = () => {
-    openingCash.value = 0;
-    closingCash.value = 0;
+    currentLogForm.value = {
+        openingCash: 0, closingCash: 0, safeCash: 0, expenses: 0, checks: [], notes: '',
+        creditCardSummary: { visa: 0, mastercard: 0, amex: 0, discover: 0, other: 0, total: 0 },
+        fuelSalesSummary: { regularGallons: 0, regularSales: 0, premiumGallons: 0, premiumSales: 0, dieselGallons: 0, dieselSales: 0, total: 0 },
+        lotteryReconciliation: { openingBalance: 0, lotterySales: 0, lotteryPaidOut: 0, settlementsPaid: 0, endingBalance: 0 },
+        safeReconciliation: { openingSafeBalance: 0, cashDrops: 0, cashRemoved: 0, endingSafeBalance: 0 },
+        paidOutLog: [],
+        depositSummary: { cashDeposit: 0, coins: 0, total: 0, depositBagNumber: '' },
+        posZReportSummary: { insideSales: 0, fuelSales: 0, lotterySales: 0, totalSales: 0 },
+        signatures: { cashierSignature: '', managerSignature: '', date: '' },
+        cashSales: 0, lotteryCashSales: 0, safeCashAdded: 0, otherCashIn: 0, safeDrops: 0, lotteryPaidOut: 0, bankDeposit: 0, otherCashOut: 0
+    };
     openingDetails.value = undefined;
     closingDetails.value = undefined;
-    safeCash.value = 0;
     safeDetails.value = undefined;
-    checks.value = [];
-    expenses.value = 0;
-    notes.value = '';
     lottoUrl.value = '';
     otherUrl.value = '';
     lottoFile.value = null;
@@ -213,24 +225,18 @@ const saveDailyLog = async () => {
         currentOtherUrl = await getDownloadURL(sRef);
      }
 
-     const logData: Omit<SalesLog, 'id' | 'locationId'> = {
+     const logData = JSON.parse(JSON.stringify({
+        ...(currentLogForm.value as any),
         date: selectedDate.value,
-        openingCash: openingCash.value,
-        openingDenominations: openingDetails.value,
-        closingCash: closingCash.value,
-        closingDenominations: closingDetails.value,
-        safeCash: safeCash.value,
-        safeCashDetails: safeDetails.value,
-        checks: checks.value,
-        safeTotal: safeTotal.value,
-        expenses: expenses.value,
-        totalSales: dailySales.value,
-        notes: notes.value,
+        openingDenominations: openingDetails.value || null,
+        closingDenominations: closingDetails.value || null,
+        safeCashDetails: safeDetails.value || null,
+        totalSales: dailySales.value || 0,
         lottoUrl: currentLottoUrl,
         otherUrl: currentOtherUrl,
         status: 'PENDING_REVIEW',
         submittedBy: 'Manager' 
-     };
+     }));
 
      if (editingLogId.value) {
         await salesStore.updateLog(editingLogId.value, logData);
@@ -299,8 +305,7 @@ const totalSalesThisMonth = computed(() => {
         .reduce((sum: number, l: SalesLog) => sum + (l.totalSales || 0), 0);
 });
 
-const addCheck = () => checks.value.push({ number: '', amount: 0 });
-const removeCheck = (idx: number) => checks.value.splice(idx, 1);
+
 
 </script>
 
@@ -316,25 +321,25 @@ const removeCheck = (idx: number) => checks.value.splice(idx, 1);
         </div>
         
         <div class="flex items-center gap-4">
-          <div class="stats-card bg-white border border-slate-100">
-            <div class="stats-icon border border-slate-100 text-blue-500 bg-white"><Wallet class="w-5 h-5" /></div>
+          <div class="glass-card p-6 flex items-center gap-5">
+            <div class="p-4 rounded-2xl bg-blue-50 text-blue-600"><Wallet class="w-5 h-5" /></div>
             <div>
-              <p class="stats-label">Net Sales (7D)</p>
-              <p class="stats-value text-slate-900">${{ totalSalesThisWeek.toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</p>
+              <p class="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1.5">Net Sales (7D)</p>
+              <p class="text-2xl font-black font-mono tracking-tighter text-slate-900">${{ totalSalesThisWeek.toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</p>
             </div>
           </div>
-          <div class="stats-card bg-white border border-slate-100">
-            <div class="stats-icon border border-slate-100 text-purple-500 bg-white"><TrendingUp class="w-5 h-5" /></div>
+          <div class="glass-card p-6 flex items-center gap-5">
+            <div class="p-4 rounded-2xl bg-purple-50 text-purple-600"><TrendingUp class="w-5 h-5" /></div>
             <div>
-              <p class="stats-label">Net Sales (Month)</p>
-              <p class="stats-value text-slate-900">${{ totalSalesThisMonth.toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</p>
+              <p class="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1.5">Net Sales (Month)</p>
+              <p class="text-2xl font-black font-mono tracking-tighter text-slate-900">${{ totalSalesThisMonth.toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</p>
             </div>
           </div>
-          <div class="stats-card bg-white border border-slate-100">
-            <div class="stats-icon border border-slate-100 text-amber-500 bg-white"><HistoryIcon class="w-5 h-5" /></div>
+          <div class="glass-card p-6 flex items-center gap-5">
+            <div class="p-4 rounded-2xl bg-amber-50 text-amber-600"><HistoryIcon class="w-5 h-5" /></div>
             <div>
-              <p class="stats-label">Active Logs</p>
-              <p class="stats-value text-slate-900">{{ salesStore.logs.length }} records</p>
+              <p class="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1.5">Active Logs</p>
+              <p class="text-2xl font-black font-mono tracking-tighter text-slate-900">{{ salesStore.logs.length }} records</p>
             </div>
           </div>
         </div>
@@ -348,11 +353,11 @@ const removeCheck = (idx: number) => checks.value.splice(idx, 1);
     <div class="grid grid-cols-1 xl:grid-cols-12 gap-10 items-start">
       
       <!-- Primary Entry Form (Left / Main) -->
-      <div class="xl:col-span-8 space-y-8">
+      <div class="xl:col-span-9 space-y-8">
         <!-- Date Selector Card -->
-        <div class="bg-white border border-slate-100 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 border-t-4 border-t-primary-500 shadow-sm">
+        <div class="glass-panel p-6 flex flex-col sm:flex-row items-center justify-between gap-6 border-t-4 border-t-primary-500">
           <div class="flex items-center gap-4">
-            <div class="p-3 bg-slate-50 rounded-2xl">
+            <div class="p-3 bg-slate-50/50 rounded-2xl">
               <Calendar class="w-6 h-6 text-slate-400" />
             </div>
             <div>
@@ -361,7 +366,7 @@ const removeCheck = (idx: number) => checks.value.splice(idx, 1);
             </div>
           </div>
 
-          <div class="flex items-center bg-slate-50 p-1.5 rounded-2xl border border-slate-100 group transition-colors">
+          <div class="flex items-center bg-slate-50/50 p-1.5 rounded-2xl border border-slate-100 group transition-colors">
             <button @click="navigateDate(-1)" class="p-2.5 hover:bg-white hover:shadow-sm rounded-xl text-slate-400 hover:text-slate-900 transition-all"><ChevronLeft class="w-5 h-5" /></button>
             <input type="date" v-model="selectedDate" class="bg-transparent border-none text-slate-900 font-black text-sm focus:ring-0 px-4 w-[160px] text-center" />
             <button @click="navigateDate(1)" class="p-2.5 hover:bg-white hover:shadow-sm rounded-xl text-slate-400 hover:text-slate-900 transition-all"><ChevronRight class="w-5 h-5" /></button>
@@ -371,119 +376,15 @@ const removeCheck = (idx: number) => checks.value.splice(idx, 1);
 
         <!-- Input Sections -->
         <div class="space-y-8">
-          <!-- Section 1: Cash Operations -->
-          <div class="section-card">
-            <div class="section-header">
-              <div class="section-icon border border-slate-100 text-emerald-500 bg-white"><DollarSign class="w-5 h-5" /></div>
-              <h3 class="text-slate-900 font-black text-lg uppercase italic">Register Balance</h3>
-            </div>
-
-            
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
-              <div class="space-y-4">
-                <div 
-                  class="flex items-center justify-between px-4 py-4 bg-transparent rounded-2xl cursor-pointer hover:bg-slate-100/50 transition-all border-2 border-slate-100"
-                  @click="activeAuditType = 'opening'"
-                >
-                   <div class="flex items-center gap-2">
-                     <span class="text-[10px] uppercase tracking-[0.2em] font-black text-slate-400">Opening Balance Audit</span>
-                     <Plus class="w-4 h-4 text-slate-400" />
-                   </div>
-                   <span class="text-base font-black text-emerald-600">${{ openingCash.toFixed(2) }}</span>
-                </div>
-              </div>
-              <div class="space-y-4">
-                <div 
-                  class="flex items-center justify-between px-4 py-4 bg-transparent rounded-2xl cursor-pointer hover:bg-slate-100/50 transition-all border-2 border-slate-100"
-                  @click="activeAuditType = 'closing'"
-                >
-                   <div class="flex items-center gap-2">
-                     <span class="text-[10px] uppercase tracking-[0.2em] font-black text-slate-400">Closing Balance Audit</span>
-                     <Plus class="w-4 h-4 text-slate-400" />
-                   </div>
-                   <span class="text-base font-black text-primary-600">${{ closingCash.toFixed(2) }}</span>
-                </div>
-              </div>
-            </div>
+          <!-- Daily Reconciliation Form -->
+          <div class="glass-panel overflow-hidden mb-8">
+            <PdiReconciliationForm :log="currentLogForm" :isEditable="true" />
           </div>
-
-
-          <!-- Section 2: Safe & Checks -->
-          <div class="section-card">
-            <div 
-              class="section-header justify-between cursor-pointer hover:bg-slate-50 transition-colors"
-              @click="isSafeExpanded = !isSafeExpanded"
-            >
-              <div class="flex items-center gap-4">
-                <div class="section-icon border border-slate-100 text-amber-500 bg-white"><Vault class="w-5 h-5" /></div>
-                <div class="flex items-center gap-2">
-                  <h3 class="text-slate-900 font-black text-lg uppercase italic">Safe Deposit</h3>
-                  <component :is="isSafeExpanded ? ChevronUp : ChevronDown" class="w-4 h-4 text-slate-400" />
-                </div>
-              </div>
-
-              <div class="text-right">
-                <span class="text-[10px] text-slate-400 uppercase font-black tracking-widest block mb-0.5">Deposit Total</span>
-                <span class="text-lg font-black text-amber-600">${{ safeTotal.toFixed(2) }}</span>
-              </div>
-            </div>
-            
-            <div v-if="isSafeExpanded" class="animate-in fade-in slide-in-from-top-2 duration-300">
-              <div class="p-6 pt-0 border-b border-slate-100 mb-6">
-                 <button 
-                  @click="activeAuditType = 'safe'"
-                  class="w-full flex items-center justify-between px-6 py-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all border border-slate-100 group"
-                 >
-                    <div class="flex items-center gap-3">
-                      <div class="p-2 bg-amber-500 text-white rounded-lg group-hover:scale-110 transition-transform"><Calculator class="w-4 h-4" /></div>
-                      <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Inventory Safe Cash</span>
-                    </div>
-                    <span class="text-sm font-black text-amber-600">${{ safeCash.toFixed(2) }}</span>
-                 </button>
-              </div>
-              
-              <div class="bg-slate-50 rounded-2xl p-6 m-6 mt-0 border border-slate-100">
-                <div class="flex items-center justify-between mb-6">
-                  <div class="flex items-center gap-3">
-                    <Receipt class="w-4 h-4 text-slate-400" />
-                    <h4 class="text-[10px] font-black uppercase tracking-widest text-slate-500">Checks & Money Orders</h4>
-                  </div>
-                  <button @click="addCheck" class="text-[10px] font-black uppercase tracking-widest text-primary-600 hover:text-primary-800 flex items-center gap-2 transition-colors">
-                    <Plus class="w-4 h-4" /> Add New
-                  </button>
-                </div>
-
-                <div v-if="checks.length > 0" class="space-y-4">
-                  <div v-for="(check, idx) in checks" :key="idx" class="flex items-center gap-4 animate-in slide-in-from-left-4 duration-300">
-                    <div class="flex-1 relative group">
-                      <div class="absolute left-4 top-4 text-slate-300 group-focus-within:text-primary-500 transition-colors pointer-events-none">
-                         <span class="text-[10px] font-black uppercase">#</span>
-                      </div>
-                      <input v-model="check.number" type="text" placeholder="Check Number" class="modern-input pl-10 h-14" />
-                    </div>
-                    <div class="w-32 relative group">
-                      <div class="absolute left-4 top-4 text-slate-300 group-focus-within:text-emerald-500 transition-colors pointer-events-none">
-                         <span class="text-[10px] font-black">$</span>
-                      </div>
-                      <input v-model.number="check.amount" type="number" step="0.01" class="no-spinner modern-input pl-10 text-right h-14 font-black" />
-                    </div>
-                    <button @click="removeCheck(idx)" class="p-4 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"><Trash2 class="w-5 h-5" /></button>
-                  </div>
-                  <div class="pt-4 border-t border-slate-100 flex justify-between items-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                    <span>Subtotal</span>
-                    <span class="text-slate-900 text-sm">${{ checksTotal.toFixed(2) }}</span>
-                  </div>
-                </div>
-                <div v-else class="text-center py-6 text-slate-400 text-[10px] font-bold uppercase tracking-widest italic">No checks recorded for this log</div>
-              </div>
-            </div>
-          </div>
-
 
           <!-- Section 3: Finalization -->
-          <div class="section-card">
-            <div class="section-header">
-                <div class="section-icon border border-slate-100 text-rose-500 bg-white"><Calculator class="w-5 h-5" /></div>
+          <div class="glass-panel overflow-hidden">
+            <div class="px-8 py-6 border-b border-slate-100/50 flex items-center gap-5">
+                <div class="p-4 rounded-2xl bg-rose-50 text-rose-500"><Calculator class="w-5 h-5" /></div>
                 <h3 class="text-slate-900 font-black text-lg uppercase italic">Review & Save</h3>
             </div>
 
@@ -493,7 +394,7 @@ const removeCheck = (idx: number) => checks.value.splice(idx, 1);
                   <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Shift Expenses / Payouts</label>
                   <div class="relative group">
                     <div class="absolute left-4 top-4 text-slate-300 group-focus-within:text-rose-500 transition-colors pointer-events-none">$</div>
-                    <input v-model.number="expenses" type="number" step="0.01" class="no-spinner modern-input pl-10 text-lg font-black text-rose-600 bg-rose-50/30 placeholder-rose-200" placeholder="0.00" />
+                    <input v-model.number="currentLogForm.expenses" type="number" step="0.01" class="no-spinner modern-input pl-10 text-lg font-black text-rose-600 bg-rose-50/30 placeholder-rose-200" placeholder="0.00" />
                   </div>
 
                   <!-- Attachments Grid -->
@@ -528,7 +429,7 @@ const removeCheck = (idx: number) => checks.value.splice(idx, 1);
                 </div>
                 <div class="space-y-4">
                    <label class="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] italic block mb-2">Detailed Reconciliation Notes</label>
-                   <textarea v-model="notes" class="w-full h-64 bg-slate-50 border-2 border-slate-100 rounded-3xl p-8 text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-primary-500 transition-all resize-none shadow-inner leading-relaxed" placeholder="Record shift discrepancies, maintenance issues, or important management updates here..."></textarea>
+                   <textarea v-model="currentLogForm.notes" class="w-full h-64 bg-slate-50 border-2 border-slate-100 rounded-3xl p-8 text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-primary-500 transition-all resize-none shadow-inner leading-relaxed" placeholder="Record shift discrepancies, maintenance issues, or important management updates here..."></textarea>
                 </div>
               </div>
 
@@ -553,18 +454,18 @@ const removeCheck = (idx: number) => checks.value.splice(idx, 1);
       </div>
 
       <!-- Sidebar: Right (History) -->
-      <div class="xl:col-span-4 space-y-6">
+      <div class="xl:col-span-3 space-y-6">
         <div class="sticky top-10 space-y-6">
-          <div class="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm relative overflow-hidden">
+          <div class="glass-panel p-6 relative overflow-hidden">
              <div class="flex items-center justify-between mb-8">
                 <div class="flex items-center gap-3">
-                   <div class="p-2.5 border border-slate-100 text-amber-500 bg-white rounded-xl">
+                   <div class="p-2.5 bg-amber-50 text-amber-500 rounded-xl">
                       <HistoryIcon class="w-5 h-5" />
                    </div>
                    <h3 class="text-lg font-black text-slate-900 uppercase italic">Archives</h3>
                 </div>
 
-                <div class="bg-slate-100 px-3 py-1 rounded-full text-[10px] font-black text-slate-400 tracking-tighter">{{ filteredLogs.length }} RECORDS</div>
+                <div class="bg-slate-100/50 px-3 py-1 rounded-full text-[10px] font-black text-slate-400 tracking-tighter">{{ filteredLogs.length }} RECORDS</div>
              </div>
 
              <!-- Mini Filter Tabs -->
@@ -572,15 +473,15 @@ const removeCheck = (idx: number) => checks.value.splice(idx, 1);
                <button v-for="f in (['today', 'week', 'month'] as const)" :key="f"
                  @click="selectedFilter = f"
                  class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
-                 :class="selectedFilter === f ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-50 text-slate-400 hover:text-slate-900'"
+                 :class="selectedFilter === f ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/20' : 'bg-slate-50/50 text-slate-400 hover:text-primary-600'"
                >{{ f }}</button>
-               <button @click="selectedFilter = 'all'" class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all" :class="selectedFilter === 'all' ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-50 text-slate-400 hover:text-slate-900'">All</button>
+               <button @click="selectedFilter = 'all'" class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all" :class="selectedFilter === 'all' ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/20' : 'bg-slate-50/50 text-slate-400 hover:text-primary-600'">All</button>
              </div>
 
              <!-- Scrolled Logs List -->
              <div class="space-y-4 max-h-[800px] overflow-y-auto pr-2 custom-scrollbar">
                 <div v-for="log in filteredLogs" :key="log.id" 
-                   class="group relative bg-white hover:bg-slate-50 rounded-2xl border border-slate-100 hover:border-slate-300 transition-all duration-300 p-5 cursor-pointer shadow-sm"
+                   class="glass-card p-5 cursor-pointer relative group"
                    @click="toggleLogExpansion(log.id)"
                 >
                    <div class="flex items-center justify-between">
@@ -612,6 +513,13 @@ const removeCheck = (idx: number) => checks.value.splice(idx, 1);
                         >
                           {{ log.status === 'PENDING_REVIEW' ? 'Pending Rev' : 'Verified' }}
                         </span>
+                      </div>
+                   </div>
+
+                   <div v-if="expandedLogIds.has(log.id)" class="mt-6 border-t border-slate-100 pt-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                      <div class="bg-white rounded-3xl p-2 border border-slate-100 shadow-sm overflow-hidden" @click.stop="">
+                          <PdiReconciliationForm v-if="log.pdiForm" :log="log" />
+                          <DailyReconciliationForm v-else :log="log" />
                       </div>
                    </div>
 
@@ -688,13 +596,13 @@ const removeCheck = (idx: number) => checks.value.splice(idx, 1);
                 <!-- Modal Body -->
                 <div class="flex-1 overflow-y-auto p-10 custom-scrollbar bg-slate-50/30">
                     <div v-if="activeAuditType === 'opening'" class="animate-in fade-in slide-in-from-bottom-5 duration-500">
-                        <CashDenominations label="Morning Register" v-model="openingCash" @update:details="(d) => openingDetails = d" />
+                        <CashDenominations label="Morning Register" :modelValue="currentLogForm.openingCash ?? 0" @update:modelValue="(v) => currentLogForm.openingCash = v" @update:details="(d) => openingDetails = d" />
                     </div>
                     <div v-if="activeAuditType === 'closing'" class="animate-in fade-in slide-in-from-bottom-5 duration-500">
-                        <CashDenominations label="End of Day Audit" v-model="closingCash" @update:details="(d) => closingDetails = d" />
+                        <CashDenominations label="End of Day Audit" :modelValue="currentLogForm.closingCash ?? 0" @update:modelValue="(v) => currentLogForm.closingCash = v" @update:details="(d) => closingDetails = d" />
                     </div>
                     <div v-if="activeAuditType === 'safe'" class="animate-in fade-in slide-in-from-bottom-5 duration-500">
-                        <CashDenominations label="Deposit Details" v-model="safeCash" @update:details="(d) => safeDetails = d" />
+                        <CashDenominations label="Deposit Details" :modelValue="currentLogForm.safeCash ?? 0" @update:modelValue="(v) => currentLogForm.safeCash = v" @update:details="(d) => safeDetails = d" />
                     </div>
                     
                     <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6 p-8 bg-white/50 rounded-[2.5rem] border border-slate-100">
@@ -707,7 +615,7 @@ const removeCheck = (idx: number) => checks.value.splice(idx, 1);
                          <div class="text-right">
                              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Running Session Total</p>
                              <p class="text-3xl font-black text-slate-900 tabular-nums">${{ 
-                                (activeAuditType === 'opening' ? openingCash : (activeAuditType === 'closing' ? closingCash : safeCash)).toFixed(2) 
+                                (activeAuditType === 'opening' ? (currentLogForm.openingCash || 0) : (activeAuditType === 'closing' ? (currentLogForm.closingCash || 0) : (currentLogForm.safeCash || 0))).toFixed(2) 
                              }}</p>
                          </div>
                     </div>
@@ -719,31 +627,6 @@ const removeCheck = (idx: number) => checks.value.splice(idx, 1);
 </template>
 
 <style scoped>
-.stats-card {
-  @apply p-6 flex items-center gap-5 transition-all hover:translate-y-[-4px] hover:shadow-2xl duration-300 rounded-3xl;
-}
-.stats-icon {
-  @apply p-4 rounded-2xl;
-}
-.stats-label {
-  @apply text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1.5;
-}
-.stats-value {
-  @apply text-2xl font-black font-mono tracking-tighter;
-}
-
-
-.section-card {
-  @apply bg-white border-2 border-slate-50 rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500;
-}
-.section-header {
-  @apply px-8 py-6 border-b border-slate-50 flex items-center gap-5;
-}
-.section-icon {
-  @apply p-4 rounded-2xl;
-}
-
-
 .modern-input {
   @apply w-full bg-slate-50/50 border-2 border-slate-50 rounded-[1.5rem] px-6 py-4 text-slate-900 font-bold placeholder-slate-200 focus:bg-white focus:border-primary-500 hover:border-slate-100 transition-all outline-none text-sm;
 }

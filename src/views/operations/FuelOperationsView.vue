@@ -2,10 +2,10 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { 
   Truck,
-  LineChart, MousePointer2,
+  MousePointer2,
   Activity, Radar, Droplet, Save, 
   ChevronLeft, ChevronRight, Loader2, Paperclip, 
-  Plus, Zap, Calendar, LayoutGrid, BarChart3
+  Plus, Zap, Calendar, LayoutGrid, Sparkles
 } from 'lucide-vue-next';
 import { usePricingStore } from '../../stores/pricing';
 import { useFuelStore, type FuelEntry } from '../../stores/fuel';
@@ -13,6 +13,7 @@ import { useNotificationStore } from '../../stores/notifications';
 import { useLocationsStore } from '../../stores/locations';
 import { storage } from '../../firebaseConfig';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { extractFuelInvoiceData } from '../../services/aiExtractionService';
 
 const fuelStore = useFuelStore();
 const pricingStore = usePricingStore();
@@ -20,9 +21,28 @@ const notificationStore = useNotificationStore();
 const locationsStore = useLocationsStore();
 
 // Navigation & Tabs
-const activeTab = ref<'inventory' | 'orders' | 'invoices' | 'analytics' | 'price-watch' | 'logistics'>('analytics');
+const activeTab = ref<'inventory' | 'orders' | 'invoices' | 'suggestions' | 'price-watch'>('suggestions');
 const selectedDate = ref<string>(new Date().toISOString().split('T')[0] as string);
 const isSubmitting = ref(false);
+const invoiceInput = ref<HTMLInputElement | null>(null);
+const atgInput = ref<HTMLInputElement | null>(null);
+const isDraggingInvoice = ref(false);
+const isDraggingAtg = ref(false);
+
+const triggerInvoiceUpload = () => invoiceInput.value?.click();
+const triggerAtgUpload = () => atgInput.value?.click();
+
+const handleInvoiceDrop = (e: DragEvent) => {
+    isDraggingInvoice.value = false;
+    const file = e.dataTransfer?.files[0];
+    if (file) invoiceImageFile.value = file;
+};
+
+const handleAtgDrop = (e: DragEvent) => {
+    isDraggingAtg.value = false;
+    const file = e.dataTransfer?.files[0];
+    if (file) atgImageFile.value = file;
+};
 
 // AI & Logistics State
 const aiRecommendations = computed(() => {
@@ -37,9 +57,6 @@ const logisticsSummary = computed(() => {
         return stats ? { type: config.type, ...stats } : null;
     }).filter((s): s is NonNullable<typeof s> => s !== null);
 });
-
-const varianceHistory = computed(() => fuelStore.getVarianceTrends());
-const marginVelocity = computed(() => fuelStore.getMarginVelocity());
 
 // Inventory Log State
 const logEntries = ref<FuelEntry[]>([]);
@@ -66,6 +83,43 @@ const newInvoice = ref({
     status: 'UNPAID' as 'PAID' | 'UNPAID'
 });
 const invoiceImageFile = ref<File | null>(null);
+const isAiProcessing = ref(false);
+
+const handleAiScan = async () => {
+    if (!invoiceImageFile.value) {
+        notificationStore.error('No BOL/Invoice file selected', 'Missing File');
+        return;
+    }
+
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+        notificationStore.error('Gemini API Key missing in environment (VITE_GEMINI_API_KEY)', 'Config Error');
+        return;
+    }
+
+    isAiProcessing.value = true;
+    try {
+        const result = await extractFuelInvoiceData(apiKey, invoiceImageFile.value);
+        if (result) {
+            newInvoice.value = {
+                ...newInvoice.value,
+                invoiceNumber: result.invoiceNumber || '',
+                supplier: result.supplier || '',
+                date: result.date || new Date().toISOString().split('T')[0],
+                items: result.items.length > 0 ? result.items : newInvoice.value.items,
+                totalAmount: result.totalAmount || 0
+            };
+            notificationStore.success('AI Data Extraction complete', 'Success');
+        } else {
+            notificationStore.error('AI failed to parse document structure', 'Parsing Error');
+        }
+    } catch (error: any) {
+        console.error("AI Scan Error Details:", error);
+        notificationStore.error(error.message?.substring(0, 100) || 'AI Extraction failed', 'Process Error');
+    } finally {
+        isAiProcessing.value = false;
+    }
+};
 
 
 onMounted(() => {
@@ -74,6 +128,7 @@ onMounted(() => {
     fuelStore.fetchInvoices();
     fuelStore.fetchCurrentPrices();
     fuelStore.fetchCompetitorPrices();
+    fuelStore.fetchTankConfigs();
     initializeInventory();
 });
 
@@ -86,8 +141,10 @@ watch(() => locationsStore.activeLocationId, () => {
     fuelStore.fetchInvoices();
     fuelStore.fetchCurrentPrices();
     fuelStore.fetchCompetitorPrices();
+    fuelStore.fetchTankConfigs();
     initializeInventory();
 });
+
 
 const initializeInventory = () => {
     const existingLog = fuelStore.logs.find(l => l.date === selectedDate.value);
@@ -100,27 +157,61 @@ const initializeInventory = () => {
             .filter(l => l.date < selectedDate.value)
             .sort((a, b) => b.date.localeCompare(a.date))[0];
         
-        const typesToUse = prevLog ? prevLog.entries.map(e => e.type) : fuelStore.defaultFuelTypes;
+        // Use either previous log types or current tank configurations
+        const typesToUse = fuelStore.tankConfigs.length > 0 
+            ? fuelStore.tankConfigs.map(c => c.type) 
+            : (prevLog ? prevLog.entries.map(e => e.type) : fuelStore.defaultFuelTypes);
         
         logEntries.value = typesToUse.map(type => {
             const prevEntry = prevLog?.entries.find(e => e.type === type);
             const beginGal = prevEntry ? prevEntry.endInvAtg : 0;
+            
+            // Calculate deliveries from invoices for this date
+            const deliveryGal = fuelStore.invoices
+                .filter(i => i.date === selectedDate.value)
+                .reduce((sum, inv) => {
+                    const item = inv.items.find(it => it.type === type);
+                    return sum + (item ? item.gallons : 0);
+                }, 0);
+
             return {
                 type,
                 inch: 0,
                 beginGal,
-                deliveryGal: 0,
+                deliveryGal,
                 soldGal: 0,
-                bookInv: beginGal,
+                bookInv: beginGal + deliveryGal,
                 endInvAtg: 0,
                 costPerGal: 0,
-                variance: -beginGal
+                variance: -(beginGal + deliveryGal)
             };
         });
         logNotes.value = '';
         atgImageUrl.value = '';
     }
 };
+
+// Watch for data loading to update view if data arrives after mount
+watch(() => fuelStore.logs, () => initializeInventory());
+watch(() => fuelStore.invoices, () => {
+    // Only update deliveries if we haven't committed this log yet (draft mode)
+    const existingLog = fuelStore.logs.find(l => l.date === selectedDate.value);
+    if (!existingLog) {
+        logEntries.value.forEach(entry => {
+            const deliveryGal = fuelStore.invoices
+                .filter(i => i.date === selectedDate.value)
+                .reduce((sum, inv) => {
+                    const item = inv.items.find(it => it.type === entry.type);
+                    return sum + (item ? item.gallons : 0);
+                }, 0);
+            
+            if (entry.deliveryGal !== deliveryGal) {
+                entry.deliveryGal = deliveryGal;
+                calculateInventoryRow(entry);
+            }
+        });
+    }
+});
 
 const calculateInventoryRow = (entry: FuelEntry) => {
     entry.bookInv = (Number(entry.beginGal) || 0) + (Number(entry.deliveryGal) || 0) - (Number(entry.soldGal) || 0);
@@ -191,7 +282,17 @@ const saveInvoice = async () => {
             imageUrl: uploadedUrl,
             createdAt: new Date().toISOString()
         });
-        notificationStore.success('Fuel invoice recorded', 'Success');
+
+        // Auto-update current inventory log with delivered gallons
+        newInvoice.value.items.forEach(invoiceItem => {
+            const entry = logEntries.value.find(e => e.type === invoiceItem.type);
+            if (entry) {
+                entry.deliveryGal = (Number(entry.deliveryGal) || 0) + invoiceItem.gallons;
+                calculateInventoryRow(entry);
+            }
+        });
+
+        notificationStore.success('Fuel invoice recorded and inventory updated', 'Success');
         newInvoice.value = { invoiceNumber: '', supplier: '', date: new Date().toISOString().split('T')[0], items: [{ type: 'Regular', gallons: 0, costPerGal: 0, taxes: 0, totalCost: 0 }], totalAmount: 0, status: 'UNPAID' };
         invoiceImageFile.value = null;
     } catch (e) {
@@ -199,43 +300,53 @@ const saveInvoice = async () => {
     }
 };
 
-// Tank Configuration
+// Tank Configuration Logic
 const SAFE_FILL_FACTOR = 0.9;
-const PUMP_SHUTOFF_THRESHOLD = 300;
-
-const tankCapacities: Record<string, number> = {
-    'Regular': 10000,
-    'Plus': 8000,
-    'Premium': 8000,
-    'Diesel': 12000,
-    'Kerosene': 4000
-};
 
 // Analytics Data
 const currentTankStatus = computed(() => {
-    const targetLog = fuelStore.logs.find(l => l.date === selectedDate.value) || fuelStore.logs[0];
-    if (!targetLog) return [];
+    // Priority: 1. Local logEntries (current session), 2. Explicit log for date, 3. Most recent log
+    const entriesToUse = logEntries.value.length > 0 ? logEntries.value : (fuelStore.logs.find(l => l.date === selectedDate.value)?.entries || fuelStore.logs[0]?.entries || []);
     
-    return targetLog.entries.map(e => {
-        const totalCapacity = tankCapacities[e.type] || 10000;
+    if (entriesToUse.length === 0) return [];
+    
+    return entriesToUse.map(e => {
+        const config = fuelStore.tankConfigs.find(c => c.type === e.type);
+        const totalCapacity = config?.capacity || 10000;
         const safeCapacity = totalCapacity * SAFE_FILL_FACTOR;
-        const percentage = Math.min(100, (e.endInvAtg / safeCapacity) * 100);
+        const shutoffPoint = config?.shutoffPoint || 300;
+        
+        // Final level logic: Use ATG if available, otherwise show the Book Inventory
+        const currentVolume = e.endInvAtg > 0 ? e.endInvAtg : Math.max(0, e.bookInv);
+        const percentage = Math.min(100, (currentVolume / safeCapacity) * 100);
+        
+        // Health Sign logic: Was it critical but now has a delivery?
+        const isCritical = currentVolume <= shutoffPoint;
+        const hasDelivery = (Number(e.deliveryGal) || 0) > 0;
         
         let fuelColor = 'bg-slate-400';
         const name = e.type.toLowerCase();
-        if (name.includes('regular')) fuelColor = 'bg-emerald-500';
+        if (name.includes('87 regular')) fuelColor = 'bg-emerald-400';
+        else if (name.includes('regular')) fuelColor = 'bg-emerald-500';
+        else if (name.includes('super')) fuelColor = 'bg-rose-600';
         else if (name.includes('premium')) fuelColor = 'bg-rose-500';
+        else if (name.includes('diesel b20')) fuelColor = 'bg-purple-600';
+        else if (name.includes('diesel b5')) fuelColor = 'bg-purple-500';
+        else if (name.includes('diesel farm')) fuelColor = 'bg-amber-600';
+        else if (name.includes('diesel clear')) fuelColor = 'bg-blue-400';
         else if (name.includes('diesel')) fuelColor = 'bg-purple-500';
         else if (name.includes('plus')) fuelColor = 'bg-sky-500';
 
         return {
             type: e.type,
-            level: e.endInvAtg,
-            totalCapacity,
+            level: currentVolume,
+            capacity: totalCapacity,
             safeCapacity,
             percentage,
             color: fuelColor,
-            isCritical: e.endInvAtg <= PUMP_SHUTOFF_THRESHOLD
+            isCritical,
+            hasDelivery,
+            hasData: logEntries.value.length > 0 || !!fuelStore.logs.find(l => l.date === selectedDate.value)
         };
     });
 });
@@ -286,12 +397,6 @@ const addNewCompetitor = () => {
     });
 };
 
-const estimatedDailyProfit = computed(() => {
-    if (fuelStore.currentPrices.length === 0) return 0;
-    const totalMargin = fuelStore.currentPrices.reduce((s, p) => s + p.margin, 0) / fuelStore.currentPrices.length;
-    return totalMargin * 3500;
-});
-
 const historicalVolumeData = computed(() => {
     const last14Days = Array.from({ length: 14 }, (_, i) => {
         const d = new Date();
@@ -315,12 +420,6 @@ const historicalVolumeData = computed(() => {
     });
 });
 
-const maxVolume = computed(() => {
-    const values = historicalVolumeData.value.map(d => d.volume);
-    return values.length > 0 ? Math.max(...values) : 10000;
-});
-
-
 </script>
 
 <template>
@@ -342,7 +441,7 @@ const maxVolume = computed(() => {
       </div>
       
       <div class="flex items-center gap-4 bg-white p-2 rounded-3xl border border-slate-100 shadow-sm overflow-x-auto no-scrollbar">
-        <button v-for="t in (['analytics', 'logistics', 'inventory', 'price-watch', 'orders', 'invoices'] as const)" :key="t"
+        <button v-for="t in (['suggestions', 'inventory', 'price-watch', 'orders', 'invoices'] as const)" :key="t"
                 @click="activeTab = t"
                 class="px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap"
                 :class="activeTab === t ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/20' : 'text-slate-400 hover:text-slate-900'">
@@ -351,183 +450,202 @@ const maxVolume = computed(() => {
       </div>
     </div>
 
-    <!-- 1. Advanced Analytics Tab (Feature 3) -->
-    <div v-if="activeTab === 'analytics'" class="space-y-8 animate-in fade-in duration-500">
+    <!-- Daily Action Suggestions Module -->
+    <div v-if="activeTab === 'suggestions'" class="space-y-8 animate-in fade-in duration-500">
+        <!-- Cylindrical Tank Visualizations -->
+        <div class="bg-white border-2 border-slate-100 rounded-[3rem] p-10 shadow-sm overflow-x-auto custom-scrollbar">
+            <div class="flex items-center gap-10 min-w-max pb-4">
+                <div v-for="tank in currentTankStatus" :key="tank.type" class="flex flex-col items-center group">
+                    <!-- Tank Header -->
+                    <div class="text-center mb-6">
+                        <span class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-slate-900 transition-colors">{{ tank.type }}</span>
+                        <div class="text-lg font-black text-slate-900 mt-1 tabular-nums">{{ tank.level.toLocaleString() }} <span class="text-[8px] opacity-40">GAL</span></div>
+                    </div>
+
+                    <!-- Cylindrical Tank Body -->
+                    <div class="relative w-28 h-56 bg-slate-100 rounded-[4rem] border-[4px] border-white shadow-2xl overflow-hidden group-hover:scale-105 transition-transform duration-500">
+                        <!-- 90% Ullage Line Indicator -->
+                        <div class="absolute top-[10%] inset-x-0 h-px bg-rose-400/30 z-20 border-t border-dashed">
+                             <span class="absolute right-2 -top-2 text-[6px] font-black text-rose-400 uppercase">90% CAP</span>
+                        </div>
+
+                        <!-- Fuel Liquid -->
+                        <div class="absolute bottom-0 w-full transition-all duration-[2000ms] ease-out-back" 
+                             :class="tank.color" 
+                             :style="{ height: `${tank.percentage}%` }">
+                             <!-- Wave Animation Effect -->
+                             <div class="absolute inset-x-0 top-0 h-4 -translate-y-1/2 bg-white/20 blur-md animate-wave"></div>
+                             
+                             <!-- Progress Label Inside Tank -->
+                             <div class="absolute inset-x-0 bottom-6 text-center">
+                                 <span class="text-[10px] font-black text-white/90 tabular-nums">{{ Math.round(tank.percentage) }}%</span>
+                             </div>
+                        </div>
+
+                        <!-- Glossy Overlay -->
+                        <div class="absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-white/20 to-transparent z-10"></div>
+                        <div class="absolute inset-y-0 right-0 w-2 bg-black/5 z-0"></div>
+                    </div>
+
+                    <!-- Tank Footer Stats -->
+                    <div class="mt-6 flex flex-col items-center gap-1">
+                        <span class="text-[8px] font-bold text-slate-400 uppercase italic">Ullage: {{ (tank.safeCapacity - tank.level).toLocaleString() }} gal</span>
+                        <div v-if="tank.isCritical" class="flex items-center gap-1 text-[8px] font-black text-rose-500 uppercase mt-1 animate-pulse">
+                            <Zap class="w-2.5 h-2.5" /> Critical
+                        </div>
+                        <div v-else-if="tank.hasDelivery" class="flex items-center gap-1 text-[8px] font-black text-emerald-500 uppercase mt-1">
+                            <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping mr-1"></div>
+                            <Activity class="w-2.5 h-2.5" /> Healthy
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Top Priority Alerts & Health Restoration -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div class="lg:col-span-2 bg-white border-2 border-slate-100 rounded-[3rem] p-10 shadow-sm overflow-hidden relative group">
-                <div class="flex items-center justify-between mb-8 relative z-10">
-                    <div>
-                        <h3 class="text-xl font-black text-slate-900 uppercase italic tracking-tighter">Margin Velocity</h3>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Daily profit pull per fuel segment</p>
+            <!-- Critical Alarms -->
+            <div v-for="tank in currentTankStatus.filter(t => t.isCritical)" :key="tank.type" 
+                 class="bg-rose-50 border-2 border-rose-100 rounded-[3rem] p-8 shadow-sm group">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="p-3 bg-rose-500 text-white rounded-2xl shadow-lg shadow-rose-500/20">
+                        <Zap class="w-6 h-6 animate-pulse" />
                     </div>
-                    <LineChart class="w-5 h-5 text-slate-300" />
+                    <div>
+                        <h3 class="text-rose-900 font-black uppercase text-sm tracking-tight italic">{{ tank.type }} CRITICAL</h3>
+                        <p class="text-rose-600/70 text-[10px] font-black uppercase tracking-widest">Immediate action required</p>
+                    </div>
+                </div>
+                <p class="text-rose-900/80 text-sm font-medium leading-relaxed mb-6">
+                    Current inventory is at <span class="font-black">{{ tank.level.toLocaleString() }} GAL</span>. 
+                    Risk of pump shutoff in less than <span class="font-black text-rose-600">4 hours</span>.
+                </p>
+                <button @click="activeTab = 'orders'" class="w-full py-4 bg-rose-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all shadow-xl shadow-rose-600/20">
+                    Dispatch Emergency Load
+                </button>
+            </div>
+
+            <!-- Health Restoration (Stabilized Tanks) -->
+            <div v-for="tank in currentTankStatus.filter(t => t.hasDelivery && !t.isCritical)" :key="'healthy-' + tank.type" 
+                 class="bg-emerald-50 border-2 border-emerald-100 rounded-[3rem] p-8 shadow-sm group animate-in zoom-in duration-500">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="p-3 bg-emerald-500 text-white rounded-2xl shadow-lg shadow-emerald-500/20">
+                        <Activity class="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h3 class="text-emerald-900 font-black uppercase text-sm tracking-tight italic">{{ tank.type }} STABILIZED</h3>
+                        <p class="text-emerald-600/70 text-[10px] font-black uppercase tracking-widest">Inventory Health Restored</p>
+                    </div>
+                </div>
+                <p class="text-emerald-900/80 text-sm font-medium leading-relaxed mb-6">
+                    Inventory has been replenished. Current volume is <span class="font-black text-emerald-600">{{ tank.level.toLocaleString() }} GAL</span>. 
+                    Supply chain risk has been mitigated.
+                </p>
+                <div class="flex items-center gap-2 text-emerald-600/60 font-black text-[9px] uppercase tracking-widest bg-white/50 py-2 px-4 rounded-xl w-fit">
+                   <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></div>
+                   Healthy Operating Level
+                </div>
+            </div>
+
+            <div v-if="marketPosition.some(p => p.status === 'EXPENSIVE')" 
+                 class="bg-amber-50 border-2 border-amber-100 rounded-[3rem] p-8 shadow-sm">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="p-3 bg-amber-500 text-white rounded-2xl shadow-lg shadow-amber-500/20">
+                        <TrendingUp class="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h3 class="text-amber-900 font-black uppercase text-sm tracking-tight italic">Pricing Alert</h3>
+                        <p class="text-amber-600/70 text-[10px] font-black uppercase tracking-widest">Market Gap reaching critical</p>
+                    </div>
+                </div>
+                <p class="text-amber-900/80 text-sm font-medium leading-relaxed mb-6">
+                    Competitors have dropped prices by an average of <span class="font-black italic">5.2¢</span>. 
+                    Gallon velocity may drop <span class="font-black text-amber-600">12%</span> if not adjusted.
+                </p>
+                <button @click="activeTab = 'price-watch'" class="w-full py-4 bg-amber-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-700 transition-all shadow-xl shadow-amber-600/20">
+                    Audit Pump Prices
+                </button>
+            </div>
+
+            <div v-if="currentTankStatus.filter(t => t.isCritical).length === 0 && currentTankStatus.filter(t => t.hasDelivery && !t.isCritical).length === 0 && !marketPosition.some(p => p.status === 'EXPENSIVE')"
+                 class="lg:col-span-3 bg-emerald-50 border-2 border-emerald-100 rounded-[3rem] p-12 shadow-sm flex flex-col items-center text-center">
+                <div class="p-4 bg-emerald-500 text-white rounded-[2rem] shadow-xl shadow-emerald-500/20 mb-6">
+                    <Sparkles class="w-10 h-10" />
+                </div>
+                <h3 class="text-2xl font-black text-emerald-900 uppercase italic tracking-tighter mb-2">Operations Optimized</h3>
+                <p class="text-emerald-700/70 text-sm font-medium tracking-tight max-w-md">
+                    All fuel levels are within safe operating parameters and terminal pricing is competitive. No critical actions pending.
+                </p>
+            </div>
+        </div>
+
+        <!-- Smart Suggestions Cards -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Delivery Efficiency -->
+            <div class="bg-white border-2 border-slate-100 rounded-[3rem] p-10 shadow-sm relative overflow-hidden group">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="p-4 bg-primary-50 text-primary-600 rounded-[2rem]">
+                        <Truck class="w-8 h-8" />
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-black text-slate-900 uppercase italic tracking-tighter">Inventory Optimization</h3>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Load consolidation suggestions</p>
+                    </div>
                 </div>
                 
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                    <div v-for="mv in marginVelocity" :key="mv.type" class="p-4 bg-slate-50 rounded-3xl border border-slate-100 hover:border-slate-900 transition-colors">
-                        <div class="text-[8px] font-black text-slate-400 uppercase mb-2">{{ mv.type }}</div>
-                        <div class="text-xl font-black text-slate-900 tabular-nums">${{ mv.velocity.toLocaleString(undefined, { maximumFractionDigits: 0 }) }}</div>
-                        <div class="text-[9px] font-bold text-emerald-500 mt-1">{{ (mv.margin * 100).toFixed(1) }}¢ margin</div>
+                <div class="space-y-4">
+                    <div v-for="tank in logisticsSummary.filter(t => t.ullage >= 6000)" :key="tank.type" 
+                         class="p-6 bg-slate-50 rounded-3xl border border-slate-100 group-hover:border-primary-200 transition-colors">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-xs font-black text-slate-900 uppercase">{{ tank.type }} Segment</span>
+                            <span class="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-600 text-[8px] font-black uppercase">Favorable Load</span>
+                        </div>
+                        <p class="text-xs text-slate-500 font-medium leading-relaxed">
+                            Current Ullage is <span class="text-slate-900 font-black">{{ tank.ullage.toLocaleString() }} GAL</span>. 
+                            You can accept a full transport load immediately to lower weighted average cost.
+                        </p>
+                        <div class="mt-4 flex gap-2">
+                           <button @click="activeTab = 'orders'" class="px-4 py-2 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest">Prepare PO</button>
+                        </div>
+                    </div>
+                    <div v-if="logisticsSummary.filter(t => t.ullage >= 6000).length === 0" class="p-10 text-center italic text-slate-400 text-sm">
+                        No immediate bulk load opportunities detected.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profit Insights -->
+            <div class="bg-white border-2 border-slate-100 rounded-[3rem] p-10 shadow-sm">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="p-4 bg-emerald-50 text-emerald-600 rounded-[2rem]">
+                        <Activity class="w-8 h-8" />
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-black text-slate-900 uppercase italic tracking-tighter">Yield Opportunities</h3>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Margin & Volume balancing</p>
                     </div>
                 </div>
 
-                <div class="mt-8 p-8 bg-slate-900 text-white rounded-[2.5rem] flex items-center justify-between relative overflow-hidden group">
-                    <TrendingUp class="absolute -right-4 -bottom-4 w-24 h-24 opacity-5" />
+                <div class="space-y-4">
+                    <div v-for="price in marketPosition.filter(p => p.status === 'CHEAP')" :key="price.type"
+                         class="p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                        <div class="flex items-center justify-between mb-2">
+                             <span class="text-xs font-black text-slate-900 uppercase">{{ price.type }} Pricing</span>
+                             <span class="px-2 py-0.5 rounded-lg bg-primary-100 text-primary-600 text-[8px] font-black uppercase">Margin Opportunity</span>
+                        </div>
+                        <p class="text-xs text-slate-500 font-medium leading-relaxed">
+                            You are <span class="text-emerald-500 font-black">{{ Math.abs(price.diff).toFixed(1) }}¢</span> cheaper than market average. 
+                            Suggesting a <span class="font-black uppercase text-slate-900">2¢ increase</span> to capture $120+ additional daily margin without losing market share.
+                        </p>
+                    </div>
+                    <div v-if="marketPosition.filter(p => p.status === 'CHEAP').length === 0" class="p-10 text-center italic text-slate-400 text-sm">
+                        Currently yielding maximum market margin per segment.
+                    </div>
+                </div>
+
+                <div class="mt-10 p-8 bg-slate-900 text-white rounded-[2.5rem] relative overflow-hidden group">
                     <div class="relative z-10">
-                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Estimated Daily Pool</p>
-                        <h4 class="text-4xl font-black tabular-nums tracking-tighter">${{ estimatedDailyProfit.toLocaleString(undefined, { maximumFractionDigits: 0 }) }}</h4>
-                    </div>
-                    <div class="text-right relative z-10">
-                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Capture Efficiency</p>
-                        <h4 class="text-3xl font-black text-emerald-400 tabular-nums">94.2%</h4>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white border-2 border-slate-100 rounded-[3rem] p-10 shadow-sm flex flex-col">
-                <div class="flex items-center justify-between mb-8">
-                    <h3 class="text-xl font-black text-slate-900 uppercase italic tracking-tighter">Variance Trend</h3>
-                    <Activity class="w-5 h-5 text-rose-300" />
-                </div>
-                
-                <div class="flex-1 flex items-end justify-between gap-1.5 h-40">
-                    <div v-for="(v, i) in varianceHistory" :key="i" 
-                         class="flex-1 rounded-t-lg transition-all hover:opacity-100 cursor-help" 
-                         :class="v.variance > 0 ? 'bg-rose-500/40' : 'bg-emerald-500/40'"
-                         :style="{ height: `${Math.min(100, Math.abs(v.variance) * 5 + 5)}%` }"
-                         :title="`${v.date}: ${v.variance}`">
-                    </div>
-                </div>
-                <div class="mt-4 pt-4 border-t border-slate-50 flex justify-between text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                    <span>30D History</span>
-                    <span>Real-Time</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Classic Tank Gauges -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div v-for="tank in currentTankStatus" :key="tank.type" class="bg-white border-2 border-slate-100 rounded-[3rem] p-8 shadow-sm group hover:border-slate-200 transition-all">
-                <div class="flex items-center justify-between mb-8">
-                   <div class="p-3 rounded-2xl bg-slate-50 text-slate-400 group-hover:text-slate-900 transition-colors">
-                      <Zap class="w-6 h-6" />
-                   </div>
-                   <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">{{ tank.type }}</span>
-                </div>
-
-                <div class="relative w-36 h-60 mx-auto mb-8 bg-slate-100 rounded-[2.5rem] border-[6px] border-white shadow-inner overflow-hidden">
-                    <div class="absolute bottom-0 w-full transition-all duration-[2000ms] ease-out-back" 
-                         :class="tank.color" 
-                         :style="{ height: `${tank.percentage}%` }">
-                         <div class="absolute inset-x-0 top-0 h-4 -translate-y-1/2 bg-white/30 blur-sm animate-wave"></div>
-                    </div>
-                    <div class="absolute inset-0 flex items-center justify-center z-10">
-                        <div class="bg-white/90 backdrop-blur px-3 py-1.5 rounded-xl shadow-lg border border-white">
-                            <span class="text-xl font-black text-slate-900 tabular-nums">{{ Math.round(tank.percentage) }}<span class="text-[8px] ml-0.5">%</span></span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="space-y-2 text-center border-t border-slate-50 pt-6">
-                    <p class="text-2xl font-black text-slate-900 tabular-nums">{{ tank.level.toLocaleString() }} <span class="text-[10px] text-slate-400">GAL</span></p>
-                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cap: {{ tank.totalCapacity.toLocaleString() }}</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Volume Trend (Feature 3 Enhancement) -->
-        <div class="bg-white border-2 border-slate-100 rounded-[3rem] p-10 shadow-sm">
-            <div class="flex items-center justify-between mb-8">
-                <div>
-                    <h3 class="text-xl font-black text-slate-900 uppercase italic tracking-tighter">Volume Velocity</h3>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">14-Day rolling terminal pull trend</p>
-                </div>
-                <BarChart3 class="w-5 h-5 text-slate-300" />
-            </div>
-            
-            <div class="h-48 flex items-end gap-2">
-                <div v-for="d in historicalVolumeData" :key="d.displayDate" 
-                     class="flex-1 bg-slate-900/5 rounded-t-xl relative group"
-                     :style="{ height: `${(d.volume / maxVolume) * 100}%` }">
-                    <div class="absolute inset-0 bg-slate-900 rounded-t-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <div class="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-slate-900 text-white text-[8px] px-2 py-1 rounded-lg">
-                        {{ d.volume.toLocaleString() }} GAL
-                    </div>
-                </div>
-            </div>
-            <div class="flex justify-between mt-6 px-1">
-                <span v-for="d in historicalVolumeData" :key="d.displayDate" 
-                      class="text-[7px] font-black text-slate-400 uppercase tracking-tighter">
-                    {{ d.displayDate }}
-                </span>
-            </div>
-        </div>
-    </div>
-
-    <!-- 2. Logistics & Smart Ordering (Feature 2) -->
-    <div v-if="activeTab === 'logistics'" class="space-y-10 animate-in fade-in duration-500">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div v-for="tank in logisticsSummary" :key="tank.type" class="bg-white border-2 border-slate-100 rounded-[3rem] p-8 shadow-sm group hover:bg-slate-900 transition-all duration-500">
-                <div class="flex items-center justify-between mb-8">
-                    <div class="p-3 rounded-2xl bg-slate-50 text-slate-400 group-hover:bg-slate-800 transition-colors text-slate-400 group-hover:text-white">
-                       <Truck class="w-6 h-6" />
-                    </div>
-                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-slate-500">{{ tank.type }}</span>
-                </div>
-
-                <div class="space-y-6">
-                    <div>
-                        <div class="flex items-end justify-between mb-3">
-                            <h4 class="text-3xl font-black text-slate-900 group-hover:text-white leading-none tabular-nums">{{ tank.currentGallons.toLocaleString() }}<span class="text-xs ml-1 text-slate-400">GAL</span></h4>
-                            <span v-if="tank.isCritical" class="px-2 py-1 rounded-lg bg-rose-50 text-rose-500 text-[8px] font-black uppercase">Critical Level</span>
-                        </div>
-                        <div class="h-3 bg-slate-100 group-hover:bg-slate-800 rounded-full overflow-hidden border border-slate-100/10 relative">
-                            <div class="absolute inset-y-0 left-0 bg-primary-500 transition-all duration-1000" :style="{ width: `${(tank.currentGallons / 10000) * 100}%` }"></div>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="p-4 bg-slate-50 group-hover:bg-slate-800 rounded-3xl border border-slate-100 group-hover:border-slate-700 transition-colors">
-                            <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Max Ullage</p>
-                            <p class="text-xs font-black text-slate-900 group-hover:text-white">{{ tank.ullage.toLocaleString() }} GAL</p>
-                        </div>
-                        <div class="p-4 bg-slate-50 group-hover:bg-slate-800 rounded-3xl border border-slate-100 group-hover:border-slate-700 transition-colors">
-                            <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Run-out Est</p>
-                            <p class="text-xs font-black" :class="tank.isShutoffRisk ? 'text-rose-500' : 'text-slate-900 group-hover:text-white'">{{ tank.hoursToShutoff }}h</p>
-                        </div>
-                    </div>
-
-                    <button class="w-full py-4 rounded-2xl bg-slate-50 group-hover:bg-primary-600 border border-slate-100 group-hover:border-primary-500 text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-white transition-all flex items-center justify-center gap-2">
-                        <Plus class="w-4 h-4" /> Dispatch Load
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-slate-900 text-white rounded-[3rem] p-12 relative overflow-hidden group border border-white/5">
-            <div class="absolute top-0 right-0 p-12 opacity-5 scale-150 rotate-12 group-hover:scale-[1.8] group-hover:rotate-0 transition-all duration-1000">
-                <Radar class="w-64 h-64" />
-            </div>
-            <div class="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                <div>
-                   <div class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500/20 text-primary-400 rounded-full border border-primary-500/30 text-[10px] font-black uppercase tracking-widest mb-8">
-                       <Zap class="w-3 h-3 animate-pulse" /> AI Logistics Active
-                   </div>
-                    <h3 class="text-5xl font-black uppercase italic tracking-tighter mb-6 leading-tight">Smart Terminal<br/><span class="text-primary-500">Ordering</span> Hub</h3>
-                    <p class="text-slate-400 font-medium leading-relaxed max-w-md text-sm">Automated analysis predicts supply chain shocks and run-outs 24 hours in advance. Recommended dispatch: 12,000 GAL Regular within 8 hours to maintain 92% network efficiency.</p>
-                    <div class="mt-10 flex flex-wrap gap-4">
-                        <button class="px-10 py-5 bg-white text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-500 hover:text-white transition-all shadow-2xl">Execute Dispatch Plan</button>
-                        <button class="px-10 py-5 bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all border border-white/10 backdrop-blur-md">View Market Map</button>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-6 relative">
-                    <div class="p-10 bg-white/5 rounded-[3rem] border border-white/10 backdrop-blur-xl hover:bg-white/10 transition-colors">
-                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 italic">Cargo Stored</p>
-                        <h4 class="text-4xl font-black tabular-nums tracking-tighter leading-none">$124,500</h4>
-                    </div>
-                    <div class="p-10 bg-white/5 rounded-[3rem] border border-white/10 backdrop-blur-xl hover:bg-white/10 transition-colors">
-                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 italic">Network Cap</p>
-                        <h4 class="text-4xl font-black tabular-nums tracking-tighter leading-none">82.4%</h4>
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Projected Daily Volume Pool</p>
+                        <h4 class="text-4xl font-black tabular-nums tracking-tighter">~{{ historicalVolumeData[historicalVolumeData.length-1]?.volume?.toLocaleString() || '0' }} <span class="text-xs">GAL</span></h4>
                     </div>
                 </div>
             </div>
@@ -718,11 +836,23 @@ const maxVolume = computed(() => {
             <div class="bg-white border-2 border-slate-100 rounded-[2.5rem] p-8 shadow-sm">
                 <h3 class="text-sm font-black text-slate-900 uppercase italic tracking-tighter mb-6">ATG Snapshots</h3>
                 <div class="space-y-6">
-                    <label class="block group cursor-pointer border-2 border-dashed border-slate-100 rounded-[2rem] p-10 bg-slate-50/50 hover:bg-white hover:border-primary-500 transition-all text-center">
-                        <Paperclip class="w-8 h-8 text-slate-300 group-hover:text-primary-500 mx-auto mb-4" />
-                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ atgImageFile ? atgImageFile.name : 'Upload Report' }}</span>
-                        <input type="file" class="hidden" @change="(e: any) => atgImageFile = e.target.files[0]" />
-                    </label>
+                    <div 
+                        @click="triggerAtgUpload"
+                        @dragover.prevent="isDraggingAtg = true"
+                        @dragleave.prevent="isDraggingAtg = false"
+                        @drop.prevent="handleAtgDrop"
+                        class="block group cursor-pointer border-2 border-dashed rounded-[2rem] p-10 transition-all text-center"
+                        :class="[
+                            atgImageFile ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50/50 border-slate-100 hover:bg-white hover:border-primary-500',
+                            isDraggingAtg ? 'bg-primary-50 border-primary-500 border-2' : ''
+                        ]"
+                    >
+                        <Paperclip class="w-8 h-8 mx-auto mb-4" :class="atgImageFile ? 'text-emerald-500' : 'text-slate-300 group-hover:text-primary-500'" />
+                        <span class="text-[10px] font-black uppercase tracking-widest" :class="atgImageFile ? 'text-emerald-700' : 'text-slate-400'">
+                            {{ atgImageFile ? atgImageFile.name : 'Upload Report' }}
+                        </span>
+                        <input type="file" ref="atgInput" class="hidden" @change="(e: any) => atgImageFile = e.target.files[0]" />
+                    </div>
                     <textarea v-model="logNotes" class="modern-input h-32 text-xs py-4" placeholder="Audit notes..."></textarea>
                 </div>
             </div>
@@ -778,16 +908,46 @@ const maxVolume = computed(() => {
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
                 <div class="space-y-6">
-                    <div class="p-8 bg-slate-50 rounded-3xl border border-slate-100 flex flex-col items-center justify-center border-dashed gap-4 text-center cursor-pointer hover:bg-white transition-all">
-                       <Paperclip class="w-10 h-10 text-slate-300" />
-                       <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest">{{ invoiceImageFile ? invoiceImageFile.name : 'Drop BOL Snapshot or PDF' }}</p>
-                       <input type="file" @change="(e: any) => invoiceImageFile = e.target.files[0]" class="hidden" />
+                    <div 
+                        @click="triggerInvoiceUpload"
+                        @dragover.prevent="isDraggingInvoice = true"
+                        @dragleave.prevent="isDraggingInvoice = false"
+                        @drop.prevent="handleInvoiceDrop"
+                        class="p-8 rounded-3xl border border-slate-100 flex flex-col items-center justify-center border-dashed gap-4 text-center cursor-pointer transition-all"
+                        :class="[
+                            invoiceImageFile ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200 hover:bg-white',
+                            isDraggingInvoice ? 'bg-primary-50 border-primary-500 border-2' : ''
+                        ]"
+                    >
+                       <Paperclip class="w-10 h-10" :class="invoiceImageFile ? 'text-emerald-500' : 'text-slate-300'" />
+                       <div class="space-y-1">
+                           <p class="text-[10px] font-black uppercase tracking-widest" :class="invoiceImageFile ? 'text-emerald-700' : 'text-slate-400'">
+                               {{ invoiceImageFile ? invoiceImageFile.name : 'Drop BOL Snapshot or PDF' }}
+                           </p>
+                           <p v-if="!invoiceImageFile" class="text-[8px] font-bold text-slate-300 uppercase italic">Or click to browse terminal files</p>
+                       </div>
+                       <input type="file" ref="invoiceInput" @change="(e: any) => invoiceImageFile = e.target.files[0]" class="hidden" accept="image/*,.pdf" />
                     </div>
                     <div class="grid grid-cols-2 gap-6">
                         <input v-model="newInvoice.invoiceNumber" placeholder="Invoice #" class="modern-input" />
                         <input v-model="newInvoice.supplier" placeholder="Supplier" class="modern-input" />
                     </div>
-                    <div v-for="(item, idx) in newInvoice.items" :key="idx" class="p-6 bg-slate-50 rounded-2xl grid grid-cols-2 gap-4">
+
+                    <!-- AI Action Bar -->
+                    <div v-if="invoiceImageFile" class="flex gap-4 p-4 bg-primary-50 rounded-3xl border border-primary-100 animate-in slide-in-from-top duration-300">
+                        <button 
+                            @click="handleAiScan" 
+                            :disabled="isAiProcessing"
+                            class="flex-1 py-4 bg-primary-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-700 transition-all flex items-center justify-center gap-3 shadow-lg shadow-primary-500/20"
+                        >
+                            <Sparkles v-if="!isAiProcessing" class="w-4 h-4" />
+                            <Loader2 v-else class="w-4 h-4 animate-spin" />
+                            <span>{{ isAiProcessing ? 'Analyzing BOL...' : 'Extract with AI (99.9% Accuracy)' }}</span>
+                        </button>
+                        <button @click="invoiceImageFile = null" class="px-6 py-4 bg-white text-slate-400 rounded-2xl text-[10px] font-black uppercase hover:text-rose-500 transition-colors">Clear</button>
+                    </div>
+
+                    <div v-for="(item, idx) in newInvoice.items" :key="idx" class="p-6 bg-slate-50 rounded-2xl grid grid-cols-2 gap-4 relative group">
                         <select v-model="item.type" class="modern-input h-10 text-xs">
                           <option v-for="t in fuelStore.defaultFuelTypes" :key="t" :value="t">{{ t }}</option>
                         </select>

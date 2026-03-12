@@ -22,57 +22,60 @@ const selectLocation = (id: string) => {
   <div class="relative">
     <button 
       @click="isOpen = !isOpen"
-      class="flex items-center gap-3 px-4 py-2 bg-slate-100/50 hover:bg-slate-100 rounded-2xl transition-all border border-transparent hover:border-slate-200 group"
+      class="flex items-center gap-4 px-5 py-2.5 bg-white/50 backdrop-blur-md hover:bg-white rounded-2xl transition-all duration-300 border border-slate-200/50 hover:border-primary-500/30 hover:shadow-xl hover:shadow-primary-500/5 group"
     >
-      <div class="w-8 h-8 rounded-xl bg-white shadow-sm flex items-center justify-center text-primary-600 group-hover:scale-110 transition-transform">
-        <Store class="w-4 h-4" />
+      <div class="w-10 h-10 rounded-xl bg-primary-600 shadow-lg shadow-primary-500/20 flex items-center justify-center text-white group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500">
+        <Store class="w-5 h-5" />
       </div>
       <div class="text-left hidden lg:block">
-        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Active Store</p>
-        <p class="text-xs font-bold text-slate-900 leading-none">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1.5">Active Store</p>
+        <p class="text-sm font-black text-slate-900 leading-none tracking-tight">
           {{ locationsStore.activeLocation?.name || 'Loading Store...' }}
         </p>
       </div>
-      <ChevronDown class="w-4 h-4 text-slate-400 group-hover:text-slate-900 transition-colors ml-1" />
+      <ChevronDown class="w-5 h-5 text-slate-400 group-hover:text-primary-600 transition-colors ml-2" :class="{'rotate-180': isOpen}" />
     </button>
 
     <!-- Dropdown -->
-    <div v-if="isOpen" class="absolute left-0 mt-3 w-72 bg-white border border-slate-200 rounded-[2rem] shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 p-2">
-      <div class="p-4 border-b border-slate-50 mb-2">
-        <h3 class="text-xs font-black text-slate-900 uppercase tracking-widest italic">Switch Location</h3>
+    <div v-if="isOpen" class="absolute left-0 mt-4 w-80 bg-white/90 backdrop-blur-2xl border border-white/20 rounded-[2rem] shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 p-3">
+      <div class="p-5 border-b border-slate-100/50 mb-3 bg-slate-50/50 rounded-t-[1.5rem]">
+        <h3 class="text-xs font-black text-slate-900 uppercase tracking-[0.25em] italic flex items-center gap-2">
+            <MapPin class="w-4 h-4 text-primary-600" />
+            Switch Location
+        </h3>
       </div>
       
-      <div class="space-y-1 max-h-64 overflow-y-auto custom-scrollbar p-1">
+      <div class="space-y-1.5 max-h-80 overflow-y-auto custom-scrollbar px-1">
         <button 
           v-for="loc in locationsStore.locations" 
           :key="loc.id"
           @click="selectLocation(loc.id)"
-          class="w-full flex items-center justify-between p-3 rounded-2xl transition-all group"
-          :class="loc.id === locationsStore.activeLocationId ? 'bg-primary-50 text-primary-600' : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'"
+          class="w-full flex items-center justify-between p-4 rounded-2xl transition-all duration-300 group relative overflow-hidden"
+          :class="loc.id === locationsStore.activeLocationId ? 'bg-primary-600 text-white shadow-xl shadow-primary-500/20 active-glow' : 'hover:bg-primary-50 text-slate-600 hover:text-primary-700'"
         >
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center shadow-sm">
-                <MapPin class="w-4 h-4" :class="loc.id === locationsStore.activeLocationId ? 'text-primary-600' : 'text-slate-400'" />
+          <div class="flex items-center gap-4 relative z-10">
+            <div class="w-11 h-11 rounded-xl bg-white border border-slate-100 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                <MapPin class="w-5 h-5" :class="loc.id === locationsStore.activeLocationId ? 'text-primary-600' : 'text-slate-400'" />
             </div>
             <div class="text-left">
-              <p class="text-xs font-bold">{{ loc.name }}</p>
-              <p class="text-[10px] opacity-60 font-medium">{{ loc.city }}, {{ loc.state }}</p>
+              <p class="text-sm font-black border-none">{{ loc.name }}</p>
+              <p class="text-[11px] opacity-70 font-bold uppercase tracking-wider">{{ loc.city }}, {{ loc.state }}</p>
             </div>
           </div>
-          <Check v-if="loc.id === locationsStore.activeLocationId" class="w-4 h-4" />
+          <Check v-if="loc.id === locationsStore.activeLocationId" class="w-5 h-5 relative z-10" />
         </button>
       </div>
 
-      <div class="p-2 border-t border-slate-50 mt-2">
-        <RouterLink to="/settings" @click="isOpen = false" class="flex items-center gap-3 w-full p-3 rounded-2xl hover:bg-slate-50 text-slate-500 hover:text-slate-900 transition-all font-bold text-[11px] uppercase tracking-widest">
-          <Plus class="w-4 h-4" />
+      <div class="p-3 border-t border-slate-100/50 mt-3 bg-slate-50/50 rounded-b-[1.5rem]">
+        <RouterLink to="/settings" @click="isOpen = false" class="flex items-center gap-4 w-full p-4 rounded-2xl hover:bg-white text-primary-600 hover:text-primary-700 transition-all font-black text-[11px] uppercase tracking-[0.2em] shadow-sm hover:shadow-md border border-transparent hover:border-primary-100">
+          <Plus class="w-5 h-5" />
           Add Store Entry
         </RouterLink>
       </div>
     </div>
 
     <!-- Backdrop -->
-    <div v-if="isOpen" @click="isOpen = false" class="fixed inset-0 z-[90]"></div>
+    <div v-if="isOpen" @click="isOpen = false" class="fixed inset-0 z-[90] bg-slate-900/5 backdrop-blur-sm"></div>
   </div>
 </template>
 

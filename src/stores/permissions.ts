@@ -38,7 +38,7 @@ export const usePermissionsStore = defineStore('permissions', () => {
                 'create-payment', 'fuel', 'lottery', 'lottery-inventory', 'lottery-reconciliation',
                 'lottery-settlement', 'shifts', 'time-clock', 'tasks', 'checklists', 'inventory',
                 'pricebook', 'purchases', 'clerk', 'journal', 'vendor-checkin', 'food-safety',
-                'competitor-watch', 'lottery-shrinkage', 'cash-flow', 'food-waste', 'sops'
+                'competitor-watch', 'lottery-shrinkage', 'cash-flow', 'food-waste', 'sops', 'tobacco-scan', 'price-model', 'liquor-tracking'
             ],
             taskActions: { view: 'Most', execute: true, modify: true, verify: false, purge: false, override: false }
         },
@@ -49,7 +49,7 @@ export const usePermissionsStore = defineStore('permissions', () => {
                 'create-payment', 'fuel', 'lottery', 'lottery-inventory', 'lottery-reconciliation',
                 'lottery-settlement', 'shifts', 'time-clock', 'tasks', 'checklists', 'inventory',
                 'pricebook', 'purchases', 'clerk', 'journal', 'vendor-checkin', 'food-safety',
-                'competitor-watch', 'lottery-shrinkage', 'cash-flow', 'food-waste', 'sops'
+                'competitor-watch', 'lottery-shrinkage', 'cash-flow', 'food-waste', 'sops', 'tobacco-scan', 'price-model', 'liquor-tracking'
             ],
             taskActions: { view: 'Shift', execute: true, modify: false, verify: false, purge: false, override: false }
         },
@@ -57,7 +57,7 @@ export const usePermissionsStore = defineStore('permissions', () => {
             id: 'Cashier',
             allowedRoutes: [
                 'dashboard', 'fuel', 'create-invoice', 'time-clock', 'tasks', 'checklists',
-                'clerk', 'vendor-checkin', 'food-safety', 'journal', 'food-waste', 'sops'
+                'clerk', 'vendor-checkin', 'food-safety', 'journal', 'food-waste', 'sops', 'liquor-tracking'
             ],
             taskActions: { view: 'Own', execute: true, modify: false, verify: false, purge: false, override: false }
         },
@@ -65,7 +65,7 @@ export const usePermissionsStore = defineStore('permissions', () => {
             id: 'Stocker',
             allowedRoutes: [
                 'dashboard', 'time-clock', 'tasks', 'checklists', 'pricebook', 'inventory',
-                'purchases', 'vendor-checkin', 'sops'
+                'purchases', 'vendor-checkin', 'sops', 'liquor-tracking'
             ],
             taskActions: { view: 'Inventory', execute: true, modify: false, verify: false, purge: false, override: false }
         }
@@ -85,7 +85,14 @@ export const usePermissionsStore = defineStore('permissions', () => {
                 }
             } else {
                 querySnapshot.forEach((doc) => {
-                    fetched[doc.id] = doc.data() as RolePermissions;
+                    const data = doc.data() as RolePermissions;
+                    // Auto-merge new default routes that aren't in Firebase yet
+                    const defaultRoutes = defaultPermissions[doc.id]?.allowedRoutes || [];
+                    if (defaultRoutes.length > 0 && !data.allowedRoutes.includes('*')) {
+                        const mergedRoutes = Array.from(new Set([...data.allowedRoutes, ...defaultRoutes]));
+                        data.allowedRoutes = mergedRoutes;
+                    }
+                    fetched[doc.id] = data;
                 });
             }
             permissions.value = fetched;

@@ -81,6 +81,8 @@ export const usePricingStore = defineStore('pricing', () => {
         if (!locationsStore.activeLocationId || !locationsStore.activeLocation) return;
 
         const activeZip = locationsStore.activeLocation.zipCode || '00000';
+        const centerLat = locationsStore.activeLocation.latitude || 32.7767;
+        const centerLng = locationsStore.activeLocation.longitude || -96.7970;
 
         loading.value = true;
         try {
@@ -111,12 +113,18 @@ export const usePricingStore = defineStore('pricing', () => {
                         ? activeZip.substring(0, 4) + zipSuffix
                         : activeZip + zipSuffix;
 
+                    // Generate random coordinate offset (approx 0.0145 degrees per mile)
+                    const latOffset = (Math.random() - 0.5) * (dist / 69) * 2;
+                    const lngOffset = (Math.random() - 0.5) * (dist / (69 * Math.cos(centerLat * Math.PI / 180))) * 2;
+
                     discovered.push({
                         stationName: `${brand} - Cluster ${simulatedZip}`,
                         brand,
                         distance: Number(dist.toFixed(1)),
                         distanceStr: `${dist.toFixed(1)} miles`,
                         zipCode: simulatedZip,
+                        latitude: centerLat + latOffset,
+                        longitude: centerLng + lngOffset,
                         prices: [
                             { fuelType: 'Regular', price: Number((basePrice + priceOffset).toFixed(3)) },
                             { fuelType: 'Diesel', price: Number((basePrice + 0.65 + priceOffset).toFixed(3)) }

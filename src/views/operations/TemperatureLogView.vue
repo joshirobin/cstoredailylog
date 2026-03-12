@@ -4,7 +4,7 @@ import { useComplianceStore } from '../../stores/compliance';
 import { useAuthStore } from '../../stores/auth';
 import { 
   Plus, Snowflake,
-  X, Activity, History, Download, Wind, Zap, Flame
+  X, Activity, History as HistoryIcon, Download, Wind, Zap, Flame, Shield, Droplet, Trash2
 } from 'lucide-vue-next';
 
 const complianceStore = useComplianceStore();
@@ -13,7 +13,7 @@ const authStore = useAuthStore();
 const isLogging = ref(false);
 const newReading = ref({
     equipmentName: '',
-    type: 'COOLER' as 'COOLER' | 'FREEZER' | 'HOT_CASE',
+    type: 'COOLER' as 'COOLER' | 'FREEZER' | 'HOT_CASE' | 'FUEL_SAFETY',
     temperature: 0,
     unit: 'F' as const,
     loggedBy: authStore.user?.email?.split('@')[0] || 'Unknown'
@@ -25,7 +25,9 @@ const equipmentList = [
     { name: 'Main Freezer', type: 'FREEZER', icon: Wind },
     { name: 'Hot Case 1 (Deli)', type: 'HOT_CASE', icon: Flame },
     { name: 'Roller Grill', type: 'HOT_CASE', icon: Flame },
-    { name: 'Coffee Station', type: 'HOT_CASE', icon: Zap }
+    { name: 'Coffee Station', type: 'HOT_CASE', icon: Zap },
+    { name: 'UST Leak Detection', type: 'FUEL_SAFETY', icon: Shield },
+    { name: 'Tank Water Check', type: 'FUEL_SAFETY', icon: Droplet }
 ] as const;
 
 const handleSubmit = async () => {
@@ -40,7 +42,7 @@ const handleSubmit = async () => {
             loggedBy: authStore.user?.email?.split('@')[0] || 'Unknown'
         };
     } catch (e) {
-        alert("Failed to log temperature");
+        alert("Failed to log entry");
     }
 };
 
@@ -54,6 +56,23 @@ const formatDate = (date: any) => {
     }).format(d);
 };
 
+const handleDelete = async (id: string | undefined) => {
+    if (!id) {
+        alert("Error: Log ID not found");
+        return;
+    }
+    
+    if (!confirm("Permanently delete this safety log entry?")) return;
+    
+    try {
+        await complianceStore.deleteReading(id);
+        alert("Log entry deleted successfully");
+    } catch (e) {
+        console.error('Delete failed:', e);
+        alert("Failed to delete log entry. Please check your permissions.");
+    }
+};
+
 onMounted(() => complianceStore.fetchReadings());
 </script>
 
@@ -63,9 +82,9 @@ onMounted(() => complianceStore.fetchReadings());
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
             <h1 class="text-4xl font-[1000] text-slate-900 uppercase italic tracking-tighter leading-none mb-3">
-                Food Safety <span class="text-rose-600">Compliance</span>
+                Compliance & <span class="text-rose-600">Safety</span>
             </h1>
-            <p class="text-xs font-black text-slate-400 uppercase tracking-[0.3em]">Hazard Analysis • Temperature Matrix</p>
+            <p class="text-xs font-black text-slate-400 uppercase tracking-[0.3em]">Operational Risk Control • Real-time Compliance</p>
         </div>
 
         <button 
@@ -93,7 +112,7 @@ onMounted(() => complianceStore.fetchReadings());
                 <div>
                    <p class="text-[8px] font-black text-slate-300 uppercase tracking-widest">Target Range</p>
                    <p class="text-[10px] font-black text-slate-900 uppercase tracking-widest">
-                       {{ eq.type === 'HOT_CASE' ? '140°F +' : '≤ 41°F' }}
+                       {{ eq.type === 'HOT_CASE' ? '140°F +' : eq.type === 'FUEL_SAFETY' ? 'Target: 0' : '≤ 41°F' }}
                    </p>
                 </div>
                 <button @click="newReading.equipmentName = eq.name; newReading.type = eq.type; isLogging = true" class="text-[10px] font-black text-primary-600 uppercase tracking-widest">Check Now</button>
@@ -104,7 +123,9 @@ onMounted(() => complianceStore.fetchReadings());
     <!-- Log Section -->
     <div v-if="isLogging" class="bg-white rounded-[2.5rem] border border-slate-900 border-2 p-8 animate-in slide-in-from-top-4">
         <div class="flex items-center justify-between mb-8">
-            <h3 class="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Temperature Verification</h3>
+            <h3 class="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">
+                {{ newReading.type === 'FUEL_SAFETY' ? 'Safety Verification' : 'Temperature Verification' }}
+            </h3>
             <button @click="isLogging = false" class="text-slate-400 hover:text-slate-900"><X /></button>
         </div>
 
@@ -116,10 +137,14 @@ onMounted(() => complianceStore.fetchReadings());
                 </select>
             </div>
             <div class="space-y-2">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Measured Temp</label>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    {{ newReading.type === 'FUEL_SAFETY' ? 'Audit Value' : 'Measured Temp' }}
+                </label>
                 <div class="flex items-center gap-2">
                     <input type="number" v-model.number="newReading.temperature" class="flex-1 bg-slate-50 border-none rounded-xl p-3 text-sm font-bold" />
-                    <span class="text-xl font-black text-slate-900">°F</span>
+                    <span class="text-xl font-black text-slate-900">
+                        {{ newReading.type === 'FUEL_SAFETY' ? 'IDX' : '°F' }}
+                    </span>
                 </div>
             </div>
             <div class="flex items-end pb-1 text-xs font-black text-slate-300 uppercase italic">
@@ -139,7 +164,7 @@ onMounted(() => complianceStore.fetchReadings());
     <div class="bg-white rounded-[2.5rem] border border-slate-100 overflow-hidden shadow-sm">
         <div class="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
             <h2 class="text-xs font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
-                <History class="w-4 h-4 text-slate-400" />
+                <HistoryIcon class="w-4 h-4 text-slate-400" />
                 Audit Trail (Last 50 Entries)
             </h2>
             <button class="flex items-center gap-2 text-[10px] font-black text-primary-600 uppercase tracking-widest">
@@ -152,10 +177,11 @@ onMounted(() => complianceStore.fetchReadings());
                 <thead class="bg-slate-50/50">
                     <tr>
                         <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Equipment</th>
-                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Temp</th>
+                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Result</th>
                         <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                         <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Inspector</th>
                         <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Timestamp</th>
+                        <th v-if="authStore.userRole === 'Admin'" class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50">
@@ -164,7 +190,9 @@ onMounted(() => complianceStore.fetchReadings());
                             <p class="text-xs font-black text-slate-900 uppercase italic tracking-tighter">{{ r.equipmentName }}</p>
                         </td>
                         <td class="px-8 py-4">
-                            <span :class="['text-sm font-black', r.status === 'ALERT' ? 'text-rose-600' : 'text-slate-900']">{{ r.temperature }}°F</span>
+                            <span :class="['text-sm font-black', r.status === 'ALERT' ? 'text-rose-600' : 'text-slate-900']">
+                                {{ r.temperature }}{{ r.type === 'FUEL_SAFETY' ? '' : '°F' }}
+                            </span>
                         </td>
                         <td class="px-8 py-4">
                             <div :class="['px-3 py-1 rounded-lg border text-[8px] font-black uppercase tracking-widest w-fit', getStatusColor(r.status)]">
@@ -176,6 +204,15 @@ onMounted(() => complianceStore.fetchReadings());
                         </td>
                         <td class="px-8 py-4">
                             <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ formatDate(r.timestamp) }}</p>
+                        </td>
+                        <td v-if="authStore.userRole === 'Admin'" class="px-8 py-4 text-right">
+                            <button 
+                                @click.stop="handleDelete(r.id)" 
+                                class="p-2 text-slate-400 hover:text-rose-600 transition-colors hover:bg-rose-50 rounded-lg group"
+                                title="Delete Entry"
+                            >
+                                <Trash2 class="w-4 h-4 group-hover:scale-110 transition-transform" />
+                            </button>
                         </td>
                     </tr>
                 </tbody>

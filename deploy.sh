@@ -11,9 +11,14 @@ echo "🚀 Starting Deployment Process..."
 echo "📦 Installing project dependencies..."
 npm install
 
-# 2. Build Frontend
-echo "🏗️ Building Frontend..."
+# 2. Build Frontend (React)
+echo "🏗️ Building React Frontend..."
+cd react-app
+npm install
 npm run build
+cd ..
+rm -rf dist
+cp -r react-app/dist ./dist
 
 # 3. Database Migration
 echo "🗄️ Running Database Migrations..."

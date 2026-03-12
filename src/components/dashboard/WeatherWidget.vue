@@ -130,10 +130,18 @@ watch(
         <div class="flex justify-between items-start mb-4">
           <div>
             <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Local Ops Weather</h3>
-            <p class="text-sm font-bold text-slate-900 mt-0.5">{{ locationsStore.activeLocation?.city }}, {{ locationsStore.activeLocation?.state }}</p>
+            <p class="text-sm font-bold text-slate-900 mt-0.5">
+              {{ locationsStore.activeLocation?.city }}, {{ locationsStore.activeLocation?.state }}
+              <span class="text-primary-500 ml-1">#{{ locationsStore.activeLocation?.zipCode }}</span>
+            </p>
           </div>
-          <div class="p-3 rounded-2xl bg-gradient-to-br from-white to-slate-50 shadow-sm border border-slate-100 group-hover:scale-110 transition-transform duration-500">
-            <component :is="getIcon(weather.icon)" class="w-6 h-6" :class="weather.isDay ? 'text-amber-500' : 'text-indigo-400'" />
+          <div class="flex items-center gap-3">
+             <div class="p-3 rounded-2xl bg-gradient-to-br from-white to-slate-50 shadow-sm border border-slate-100 group-hover:scale-110 transition-transform duration-500">
+               <component :is="getIcon(weather.icon)" class="w-6 h-6" :class="weather.isDay ? 'text-amber-500' : 'text-indigo-400'" />
+             </div>
+             <button @click="updateWeather" class="p-2 bg-slate-50 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-all" title="Refresh Weather">
+               <Zap class="w-4 h-4" :class="{ 'animate-spin': loading }" />
+             </button>
           </div>
         </div>
 
@@ -169,7 +177,13 @@ watch(
           </div>
           <div>
             <span class="text-[9px] font-black text-primary-600 uppercase tracking-widest block mb-0.5">Ops Strategy</span>
-            <p class="text-[11px] font-bold text-slate-700 leading-tight">{{ weather.insight }}</p>
+            <p class="text-[11px] font-bold text-slate-700 leading-tight">
+              {{ weather.insight }}
+              <span v-if="locationsStore.activeLocation?.latitude === 32.7767 && locationsStore.activeLocation?.zipCode !== '75201'" 
+                    class="block mt-1 text-[8px] text-rose-500 font-black uppercase">
+                ⚠️ Error: Using fallback coordinates. Zip geocoding failed.
+              </span>
+            </p>
           </div>
         </div>
       </div>

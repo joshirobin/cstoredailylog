@@ -17,8 +17,33 @@ const form = ref({
     address: '',
     city: '',
     state: '',
-    zipCode: ''
+    zipCode: '',
+    disabledFeatures: [] as string[]
 });
+
+const featureToggles = [
+  { id: 'fuel', name: 'Fuel Inventory' },
+  { id: 'lottery', name: 'Lottery Management' },
+  { id: 'tobacco-scan', name: 'Tobacco Scan' },
+  { id: 'price-model', name: 'Price Model' },
+  { id: 'pricebook', name: 'Price Book' },
+  { id: 'visual-audit', name: 'Visual Audit' },
+  { id: 'food-waste', name: 'Food Waste' },
+  { id: 'cash-flow', name: 'Cash Predictor' },
+  { id: 'vendor-checkin', name: 'Vendor Checkin' },
+  { id: 'food-safety', name: 'Compliance & Safety' },
+  { id: 'settings', name: 'Store Settings' },
+  { id: 'store-selector', name: 'Store Selections' },
+];
+
+const toggleFeature = (id: string) => {
+    const index = form.value.disabledFeatures.indexOf(id);
+    if (index === -1) {
+        form.value.disabledFeatures.push(id);
+    } else {
+        form.value.disabledFeatures.splice(index, 1);
+    }
+};
 
 onMounted(async () => {
     await locationsStore.fetchLocations();
@@ -32,7 +57,8 @@ const resetForm = () => {
             address: locationsStore.activeLocation.address,
             city: locationsStore.activeLocation.city,
             state: locationsStore.activeLocation.state,
-            zipCode: locationsStore.activeLocation.zipCode
+            zipCode: locationsStore.activeLocation.zipCode,
+            disabledFeatures: locationsStore.activeLocation.disabledFeatures || []
         };
     }
 };
@@ -236,6 +262,20 @@ const handleAddLocation = async () => {
                         <h4 class="text-xs font-black text-slate-900 uppercase">Status: {{ locationsStore.activeLocation?.status }}</h4>
                         <p class="text-[10px] text-slate-500 font-bold mt-1">This node is verified and transmitting real-time analytics to the central cluster.</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- Feature Toggles -->
+            <div class="glass-panel p-8 space-y-6">
+                <div class="flex items-center gap-4 border-b border-slate-100 pb-4">
+                    <h3 class="text-xl font-black text-slate-900 uppercase italic tracking-tighter">Feature Toggles</h3>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Enable or Disable Modules</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <label v-for="feature in featureToggles" :key="feature.id" class="flex items-center gap-3 cursor-pointer p-4 rounded-xl border-2 transition-all" :class="form.disabledFeatures.includes(feature.id) ? 'bg-slate-50 border-slate-200' : 'bg-primary-50 border-primary-100'">
+                        <input type="checkbox" :checked="!form.disabledFeatures.includes(feature.id)" @change="toggleFeature(feature.id)" class="w-5 h-5 accent-primary-600 cursor-pointer" />
+                        <span class="font-bold text-sm tracking-tight" :class="form.disabledFeatures.includes(feature.id) ? 'text-slate-400' : 'text-primary-700'">{{ feature.name }}</span>
+                    </label>
                 </div>
             </div>
         </div>

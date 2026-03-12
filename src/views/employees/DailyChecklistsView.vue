@@ -12,7 +12,9 @@ import {
   Calendar, Check, 
   History, CheckCircle2,
   Zap,
-  Save
+  Save,
+  Camera,
+  Image as ImageIcon
 } from 'lucide-vue-next';
 
 // --- State ---
@@ -20,6 +22,7 @@ const checklistsStore = useChecklistsStore();
 const authStore = useAuthStore();
 const selectedRole = ref('cashier');
 const formState = ref<Record<string, any>>({});
+const photosState = ref<Record<string, string>>({});
 const showSignatureModal = ref(false);
 const isSubmitting = ref(false);
 const viewMode = ref<'active' | 'history'>('active');
@@ -54,8 +57,10 @@ const loadData = async () => {
         await checklistsStore.fetchChecklist(selectedRole.value);
         if (checklistsStore.currentSubmission) {
             formState.value = { ...checklistsStore.currentSubmission.responses };
+            photosState.value = { ...(checklistsStore.currentSubmission.photos || {}) };
         } else {
             formState.value = {};
+            photosState.value = {};
         }
     } else {
         await checklistsStore.fetchAllChecklists();
@@ -81,6 +86,22 @@ const handleInputChange = (taskId: string, value: any) => {
     saveDraft();
 };
 
+const triggerPhotoUpload = (taskId: string) => {
+    document.getElementById(`photo-upload-${taskId}`)?.click();
+};
+
+const handlePhotoCapture = (taskId: string, event: Event) => {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            photosState.value[taskId] = e.target?.result as string;
+            saveDraft();
+        };
+        reader.readAsDataURL(file);
+    }
+};
+
 let saveTimeout: any = null;
 const saveDraft = () => {
     if (saveTimeout) clearTimeout(saveTimeout);
@@ -90,6 +111,7 @@ const saveDraft = () => {
             templateId: activeTemplate.value.template_id,
             role: selectedRole.value,
             responses: formState.value,
+            photos: photosState.value,
             progress: progress.value,
             status: 'IN_PROGRESS',
             employeeId: authStore.user?.uid || 'unknown',
@@ -106,6 +128,7 @@ const handleFinalSubmit = async (signatureData: string) => {
             templateId: activeTemplate.value.template_id,
             role: selectedRole.value,
             responses: formState.value,
+            photos: photosState.value,
             progress: 100,
             status: 'COMPLETED',
             submittedAt: null,
@@ -251,13 +274,40 @@ const handleFinalSubmit = async (signatureData: string) => {
                     >
                         <div class="relative z-10 space-y-4">
                             <div class="flex justify-between items-start gap-4">
-                                <span :class="['text-[11px] font-black uppercase tracking-widest leading-normal transition-colors block', formState[task.task_id] ? 'text-slate-900' : 'text-slate-500']">
-                                    {{ task.label }}
-                                </span>
+                                <div class="flex items-center gap-2">
+                                    <span :class="['text-[11px] font-black uppercase tracking-widest leading-normal transition-colors block', formState[task.task_id] ? 'text-slate-900' : 'text-slate-500']">
+                                        {{ task.label }}
+                                    </span>
+                                    <button 
+                                        v-if="task.hasAttachment"
+                                        @click="triggerPhotoUpload(task.task_id)"
+                                        :class="['p-1.5 rounded-lg border flex items-center justify-center transition-all', photosState[task.task_id] ? 'bg-indigo-50 border-indigo-200 text-indigo-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:text-indigo-500']"
+                                    >
+                                        <ImageIcon v-if="photosState[task.task_id]" class="w-4 h-4" />
+                                        <Camera v-else class="w-4 h-4" />
+                                    </button>
+                                    <input 
+                                        v-if="task.hasAttachment"
+                                        type="file" 
+                                        accept="image/*" 
+                                        capture="environment"
+                                        class="hidden" 
+                                        :id="'photo-upload-' + task.task_id"
+                                        @change="($event) => handlePhotoCapture(task.task_id, $event)"
+                                    />
+                                </div>
                                 <div v-if="task.required && !formState[task.task_id]" class="w-1.5 h-1.5 rounded-full bg-rose-500 mt-1"></div>
                             </div>
+                            
+                            <div v-if="photosState[task.task_id]" class="relative w-full h-24 rounded-xl overflow-hidden border border-slate-200 shadow-sm mt-3">
+                                <img :src="photosState[task.task_id]" class="w-full h-full object-cover" />
+                                <button @click="photosState[task.task_id] = ''; saveDraft()" class="absolute top-1 right-1 bg-black/50 hover:bg-black/70 text-white rounded-full p-1 transition-colors">
+                                    <span class="sr-only">Remove photo</span>
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                </button>
+                            </div>
 
-                            <div v-if="task.type === 'boolean'" class="flex items-center justify-between">
+                            <div v-if="task.type === 'boolean'" class="flex items-center gap-3">
                                 <span :class="['text-[9px] font-black uppercase tracking-widest', formState[task.task_id] ? 'text-emerald-500' : 'text-slate-300']">
                                     {{ formState[task.task_id] ? 'Verified' : 'Manual Sign-off' }}
                                 </span>

@@ -21,15 +21,25 @@ export interface LotteryBook {
     gameId: string;
     gameName: string; // Denormalized for query ease
     bookNumber: string;
+    slotNumber?: string;
     ticketStart: number;
     ticketEnd: number;
     currentTicket: number; // The next ticket to be sold
-    status: 'IN_STOCK' | 'ACTIVE' | 'SOLD_OUT' | 'PENDING_SETTLEMENT' | 'SETTLED' | 'ARCHIVED';
+    status: 'IN_STOCK' | 'ACTIVE' | 'SOLD_OUT' | 'PENDING_SETTLEMENT' | 'SETTLED' | 'ARCHIVED' | 'RETURNED';
     locationId: string;
     assignedRegister?: string;
     receivedDate: Timestamp;
     activationDate?: Timestamp | null;
     settledDate?: Timestamp | null;
+    returnInfo?: {
+        returnDate: Timestamp;
+        returnType: 'FULL' | 'PARTIAL';
+        startTicket: number;
+        endTicket: number;
+        ticketCount: number;
+        creditAmount: number;
+        reason?: string;
+    };
 }
 
 export interface DailyLotteryCount {
@@ -44,6 +54,9 @@ export interface DailyLotteryCount {
     locationId: string;
     notes?: string;
     approvedBy?: string;
+    soldCount?: number;
+    salesAmount?: number;
+    slotNumber?: string;
 }
 
 export interface LotterySettlement {
@@ -86,6 +99,7 @@ export const useLotteryStore = defineStore('lottery', () => {
     const activeBooks = computed(() => books.value.filter(b => b.status === 'ACTIVE'));
     const inStockBooks = computed(() => books.value.filter(b => b.status === 'IN_STOCK'));
     const pendingSettlements = computed(() => books.value.filter(b => b.status === 'SOLD_OUT' || b.status === 'PENDING_SETTLEMENT'));
+    const returnedBooks = computed(() => books.value.filter(b => b.status === 'RETURNED'));
 
     // Actions
 
@@ -151,12 +165,13 @@ export const useLotteryStore = defineStore('lottery', () => {
         }
     };
 
-    const activateBook = async (bookId: string, registerId: string) => {
+    const activateBook = async (bookId: string, registerId: string, slotNumber?: string) => {
         try {
             const bookRef = doc(db, 'lottery_books', bookId);
             await updateDoc(bookRef, {
                 status: 'ACTIVE',
                 assignedRegister: registerId,
+                slotNumber: slotNumber || null,
                 activationDate: Timestamp.now()
             });
             await fetchBooks();
@@ -217,10 +232,20 @@ export const useLotteryStore = defineStore('lottery', () => {
 
                 const book = books.value.find(b => b.id === count.bookId);
                 if (book) {
-                    const newCurrent = book.ticketEnd - count.physicalRemaining;
-                    if (newCurrent > book.currentTicket) {
+                    // Update currentTicket to the endTicket from today's count
+                    // This ensures tomorrow's "Begin #" is today's "End #"
+                    const newCurrent = (count as any).endTicket || book.currentTicket;
+
+                    if (newCurrent >= book.currentTicket) {
                         const bookRef = doc(db, 'lottery_books', count.bookId);
-                        await updateDoc(bookRef, { currentTicket: newCurrent });
+                        const updates: any = { currentTicket: newCurrent };
+
+                        // If sold out, update status
+                        if (newCurrent >= book.ticketEnd) {
+                            updates.status = 'SOLD_OUT';
+                        }
+
+                        await updateDoc(bookRef, updates);
                     }
                 }
             }
@@ -267,6 +292,23 @@ export const useLotteryStore = defineStore('lottery', () => {
         }
     };
 
+    const returnBook = async (bookId: string, returnData: any) => {
+        try {
+            const bookRef = doc(db, 'lottery_books', bookId);
+            await updateDoc(bookRef, {
+                status: 'RETURNED',
+                returnInfo: {
+                    ...returnData,
+                    returnDate: Timestamp.now()
+                }
+            });
+            await fetchBooks();
+        } catch (e) {
+            console.error('Return Book Error:', e);
+            throw e;
+        }
+    };
+
     const updateBook = async (bookId: string, updates: Partial<LotteryBook>) => {
         try {
             const bookRef = doc(db, 'lottery_books', bookId);
@@ -294,6 +336,24 @@ export const useLotteryStore = defineStore('lottery', () => {
         }
     };
 
+    const fetchSettlements = async () => {
+        const locationsStore = useLocationsStore();
+        if (!locationsStore.activeLocationId) return;
+
+        try {
+            const q = query(
+                collection(db, 'lottery_settlements'),
+                where('locationId', '==', locationsStore.activeLocationId)
+            );
+            const snap = await getDocs(q);
+            const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as LotterySettlement));
+            // Client-side sort desc by date
+            settlements.value = data.sort((a, b) => b.settlementDate.seconds - a.settlementDate.seconds);
+        } catch (e) {
+            console.error('Fetch Settlements Error:', e);
+        }
+    };
+
     return {
         games,
         books,
@@ -302,6 +362,7 @@ export const useLotteryStore = defineStore('lottery', () => {
         activeBooks,
         inStockBooks,
         pendingSettlements,
+        returnedBooks,
         loading,
         fetchGames,
         addGame,
@@ -312,9 +373,11 @@ export const useLotteryStore = defineStore('lottery', () => {
         saveDailyCounts,
         markSoldOut,
         settleBook,
+        returnBook,
         updateBook,
         saveOnlineReport,
         history,
-        fetchHistory
+        fetchHistory,
+        fetchSettlements
     };
 });

@@ -16,6 +16,7 @@ export interface Location {
     managerId?: string;
     status: 'Active' | 'Inactive';
     createdAt: string;
+    disabledFeatures?: string[];
 }
 
 export const useLocationsStore = defineStore('locations', () => {
@@ -164,20 +165,41 @@ export const useLocationsStore = defineStore('locations', () => {
     };
 
     const geocodeZipCode = async (zip: string) => {
+        if (!zip) return null;
+
         try {
+            // Priority 1: Zippopotam (Specifically for US Zip codes)
             const response = await fetch(`https://api.zippopotam.us/us/${zip}`);
             if (response.ok) {
                 const data = await response.json();
-                const place = data.places[0];
-                return {
-                    latitude: parseFloat(place.latitude),
-                    longitude: parseFloat(place.longitude),
-                    city: place['place name'],
-                    state: place['state abbreviation']
-                };
+                if (data.places && data.places.length > 0) {
+                    const place = data.places[0];
+                    return {
+                        latitude: parseFloat(place.latitude),
+                        longitude: parseFloat(place.longitude),
+                        city: place['place name'],
+                        state: place['state abbreviation']
+                    };
+                }
+            }
+
+            // Priority 2: Open-Meteo Geocoding API (Global fallback)
+            console.log(`Geocoding: Zippopotam failed for ${zip}. Trying Open-Meteo...`);
+            const openMeteoResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${zip}&count=1&language=en&format=json`);
+            if (openMeteoResponse.ok) {
+                const data = await openMeteoResponse.json();
+                if (data.results && data.results.length > 0) {
+                    const result = data.results[0];
+                    return {
+                        latitude: result.latitude,
+                        longitude: result.longitude,
+                        city: result.name,
+                        state: result.admin1_id ? result.admin1 : ''
+                    };
+                }
             }
         } catch (error) {
-            console.error('Geocoding failed:', error);
+            console.error('Geocoding failed across all providers:', error);
         }
         return null;
     };
