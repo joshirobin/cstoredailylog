@@ -139,7 +139,20 @@ export const useTimesheetsStore = defineStore('timesheets', () => {
             const updatedLog = timeLogs.value.find(l => l.id === logId);
             
             if (employee && updatedLog && employee.email) {
-                await employeesStore.sendClockOutEmail(employee, updatedLog);
+                // Calculate Weekly Total (Current Week: Sunday to Now)
+                const now = new Date();
+                const startOfWeek = new Date(now);
+                startOfWeek.setDate(now.getDate() - now.getDay());
+                startOfWeek.setHours(0, 0, 0, 0);
+
+                const weekLogs = timeLogs.value.filter(log => 
+                    log.status === 'Completed' && 
+                    log.clockIn.toDate() >= startOfWeek
+                );
+                
+                const weeklyTotal = weekLogs.reduce((sum, l) => sum + (l.totalHours || 0), 0);
+
+                await employeesStore.sendClockOutEmail(employee, updatedLog, Number(weeklyTotal.toFixed(2)));
             }
         } catch (error) {
             console.error('Failed to clock out:', error);

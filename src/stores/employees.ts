@@ -130,7 +130,7 @@ export const useEmployeesStore = defineStore('employees', () => {
         }
     };
 
-    const sendClockOutEmail = async (employee: Employee, log: any) => {
+    const sendClockOutEmail = async (employee: Employee, log: any, weeklyHours?: number) => {
         try {
             const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001';
             const clockIn = log.clockIn.toDate().toLocaleString();
@@ -150,8 +150,9 @@ export const useEmployeesStore = defineStore('employees', () => {
                           `- Clock In: ${clockIn}\n` +
                           `- Clock Out: ${clockOut}\n` +
                           `- Total Duration: ${log.totalHours} hours\n` +
+                          (weeklyHours !== undefined ? `- WEEKLY TOTAL: ${weeklyHours} hours\n` : '') +
                           (log.isLate ? `- Note: Late for ${log.lateMinutes} mins\n` : '') +
-                          `- Estimated Pay: $${(Number(log.totalHours) * employee.hourlyRate).toFixed(2)}\n\n` +
+                          `- Estimated Shift Pay: $${(Number(log.totalHours) * employee.hourlyRate).toFixed(2)}\n\n` +
                           `Thank you for your hard work today!\n\nBest regards,\nWorkforce Hub Management`
                 }),
             });
