@@ -144,7 +144,7 @@ const toggleSubmenu = (name: string) => {
     </div>
 
     <nav class="flex-1 px-6 space-y-1.5 overflow-y-auto custom-scrollbar">
-      <div v-if="filteredPrimaryNav.length > 0" class="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-4 px-3 mt-8">Operations</div>
+      <div v-if="filteredPrimaryNav.length > 0" class="text-xs font-black text-slate-400 uppercase tracking-[0.25em] mb-4 px-3 mt-8">Operations</div>
       <div v-for="item in filteredPrimaryNav" :key="item.name" class="flex flex-col">
         <template v-if="item.children">
             <button 
@@ -166,7 +166,7 @@ const toggleSubmenu = (name: string) => {
                     class="group flex items-center justify-between px-4 py-2.5 rounded-xl transition-all duration-300"
                     :class="isActive(child.href) ? 'bg-primary-50 text-primary-600 font-bold' : 'text-slate-400 hover:text-primary-600 hover:bg-white'"
                 >
-                    <span class="text-[13px] tracking-tight">{{ child.name }}</span>
+                    <span class="text-sm tracking-tight">{{ child.name }}</span>
                     <div v-if="isActive(child.href)" class="w-1.5 h-1.5 rounded-full bg-primary-600 animate-pulse"></div>
                 </RouterLink>
             </div>
@@ -185,7 +185,7 @@ const toggleSubmenu = (name: string) => {
         </RouterLink>
       </div>
 
-      <div v-if="filteredDataNav.length > 0" class="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-4 px-3 mt-10">Financials</div>
+      <div v-if="filteredDataNav.length > 0" class="text-xs font-black text-slate-400 uppercase tracking-[0.25em] mb-4 px-3 mt-10">Financials</div>
       <RouterLink 
         v-for="item in filteredDataNav" 
         :key="item.name" 
@@ -200,7 +200,7 @@ const toggleSubmenu = (name: string) => {
         <ChevronRight v-if="isActive(item.href)" class="w-4 h-4 relative z-10 animate-pulse" />
       </RouterLink>
 
-      <div v-if="filteredStaffNav.length > 0" class="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-4 px-3 mt-10">Staff Control</div>
+      <div v-if="filteredStaffNav.length > 0" class="text-xs font-black text-slate-400 uppercase tracking-[0.25em] mb-4 px-3 mt-10">Staff Control</div>
       <RouterLink 
         v-for="item in filteredStaffNav" 
         :key="item.name" 
@@ -215,7 +215,7 @@ const toggleSubmenu = (name: string) => {
         <ChevronRight v-if="isActive(item.href)" class="w-4 h-4 relative z-10 animate-pulse" />
       </RouterLink>
 
-      <div v-if="filteredAdminNav.length > 0" class="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-4 px-3 mt-10">Administration</div>
+      <div v-if="filteredAdminNav.length > 0" class="text-xs font-black text-slate-400 uppercase tracking-[0.25em] mb-4 px-3 mt-10">Administration</div>
       <RouterLink 
         v-for="item in filteredAdminNav" 
         :key="item.name" 

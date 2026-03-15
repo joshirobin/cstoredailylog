@@ -434,7 +434,7 @@ const historicalVolumeData = computed(() => {
         <div>
           <h1 class="text-3xl font-black text-slate-900 uppercase italic tracking-tighter">Fuel Operations Hub</h1>
           <div class="flex items-center gap-2 mt-1">
-            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em]">Terminal Logistics & Tank Inventory</p>
+            <p class="text-slate-500 text-xs font-bold uppercase tracking-[0.2em]">Terminal Logistics & Tank Inventory</p>
             <span v-if="activeAlarms.length > 0" class="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span>
           </div>
         </div>
@@ -443,7 +443,7 @@ const historicalVolumeData = computed(() => {
       <div class="flex items-center gap-4 bg-white p-2 rounded-3xl border border-slate-100 shadow-sm overflow-x-auto no-scrollbar">
         <button v-for="t in (['suggestions', 'inventory', 'price-watch', 'orders', 'invoices'] as const)" :key="t"
                 @click="activeTab = t"
-                class="px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap"
+                class="px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap"
                 :class="activeTab === t ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/20' : 'text-slate-400 hover:text-slate-900'">
           {{ t.replace('-', ' ') }}
         </button>
@@ -458,15 +458,15 @@ const historicalVolumeData = computed(() => {
                 <div v-for="tank in currentTankStatus" :key="tank.type" class="flex flex-col items-center group">
                     <!-- Tank Header -->
                     <div class="text-center mb-6">
-                        <span class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-slate-900 transition-colors">{{ tank.type }}</span>
-                        <div class="text-lg font-black text-slate-900 mt-1 tabular-nums">{{ tank.level.toLocaleString() }} <span class="text-[8px] opacity-40">GAL</span></div>
+                        <span class="text-xs font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-slate-900 transition-colors">{{ tank.type }}</span>
+                        <div class="text-lg font-black text-slate-900 mt-1 tabular-nums">{{ tank.level.toLocaleString() }} <span class="text-[10px] opacity-40">GAL</span></div>
                     </div>
 
                     <!-- Cylindrical Tank Body -->
                     <div class="relative w-28 h-56 bg-slate-100 rounded-[4rem] border-[4px] border-white shadow-2xl overflow-hidden group-hover:scale-105 transition-transform duration-500">
                         <!-- 90% Ullage Line Indicator -->
                         <div class="absolute top-[10%] inset-x-0 h-px bg-rose-400/30 z-20 border-t border-dashed">
-                             <span class="absolute right-2 -top-2 text-[6px] font-black text-rose-400 uppercase">90% CAP</span>
+                             <span class="absolute right-2 -top-2 text-[8px] font-black text-rose-400 uppercase">90% CAP</span>
                         </div>
 
                         <!-- Fuel Liquid -->
@@ -478,7 +478,7 @@ const historicalVolumeData = computed(() => {
                              
                              <!-- Progress Label Inside Tank -->
                              <div class="absolute inset-x-0 bottom-6 text-center">
-                                 <span class="text-[10px] font-black text-white/90 tabular-nums">{{ Math.round(tank.percentage) }}%</span>
+                                 <span class="text-xs font-black text-white/90 tabular-nums">{{ Math.round(tank.percentage) }}%</span>
                              </div>
                         </div>
 
@@ -489,11 +489,11 @@ const historicalVolumeData = computed(() => {
 
                     <!-- Tank Footer Stats -->
                     <div class="mt-6 flex flex-col items-center gap-1">
-                        <span class="text-[8px] font-bold text-slate-400 uppercase italic">Ullage: {{ (tank.safeCapacity - tank.level).toLocaleString() }} gal</span>
-                        <div v-if="tank.isCritical" class="flex items-center gap-1 text-[8px] font-black text-rose-500 uppercase mt-1 animate-pulse">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase italic">Ullage: {{ (tank.safeCapacity - tank.level).toLocaleString() }} gal</span>
+                        <div v-if="tank.isCritical" class="flex items-center gap-1 text-[10px] font-black text-rose-500 uppercase mt-1 animate-pulse">
                             <Zap class="w-2.5 h-2.5" /> Critical
                         </div>
-                        <div v-else-if="tank.hasDelivery" class="flex items-center gap-1 text-[8px] font-black text-emerald-500 uppercase mt-1">
+                        <div v-else-if="tank.hasDelivery" class="flex items-center gap-1 text-[10px] font-black text-emerald-500 uppercase mt-1">
                             <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping mr-1"></div>
                             <Activity class="w-2.5 h-2.5" /> Healthy
                         </div>
@@ -512,14 +512,14 @@ const historicalVolumeData = computed(() => {
                     </div>
                     <div>
                         <h3 class="text-rose-900 font-black uppercase text-sm tracking-tight italic">{{ tank.type }} CRITICAL</h3>
-                        <p class="text-rose-600/70 text-[10px] font-black uppercase tracking-widest">Immediate action required</p>
+                        <p class="text-rose-600/70 text-xs font-black uppercase tracking-widest">Immediate action required</p>
                     </div>
                 </div>
                 <p class="text-rose-900/80 text-sm font-medium leading-relaxed mb-6">
                     Current inventory is at <span class="font-black">{{ tank.level.toLocaleString() }} GAL</span>. 
                     Risk of pump shutoff in less than <span class="font-black text-rose-600">4 hours</span>.
                 </p>
-                <button @click="activeTab = 'orders'" class="w-full py-4 bg-rose-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all shadow-xl shadow-rose-600/20">
+                <button @click="activeTab = 'orders'" class="w-full py-4 bg-rose-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-rose-700 transition-all shadow-xl shadow-rose-600/20">
                     Dispatch Emergency Load
                 </button>
             </div>
@@ -533,14 +533,14 @@ const historicalVolumeData = computed(() => {
                     </div>
                     <div>
                         <h3 class="text-emerald-900 font-black uppercase text-sm tracking-tight italic">{{ tank.type }} STABILIZED</h3>
-                        <p class="text-emerald-600/70 text-[10px] font-black uppercase tracking-widest">Inventory Health Restored</p>
+                        <p class="text-emerald-600/70 text-xs font-black uppercase tracking-widest">Inventory Health Restored</p>
                     </div>
                 </div>
                 <p class="text-emerald-900/80 text-sm font-medium leading-relaxed mb-6">
                     Inventory has been replenished. Current volume is <span class="font-black text-emerald-600">{{ tank.level.toLocaleString() }} GAL</span>. 
                     Supply chain risk has been mitigated.
                 </p>
-                <div class="flex items-center gap-2 text-emerald-600/60 font-black text-[9px] uppercase tracking-widest bg-white/50 py-2 px-4 rounded-xl w-fit">
+                <div class="flex items-center gap-2 text-emerald-600/60 font-black text-xs uppercase tracking-widest bg-white/50 py-2 px-4 rounded-xl w-fit">
                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></div>
                    Healthy Operating Level
                 </div>
@@ -554,14 +554,14 @@ const historicalVolumeData = computed(() => {
                     </div>
                     <div>
                         <h3 class="text-amber-900 font-black uppercase text-sm tracking-tight italic">Pricing Alert</h3>
-                        <p class="text-amber-600/70 text-[10px] font-black uppercase tracking-widest">Market Gap reaching critical</p>
+                        <p class="text-amber-600/70 text-xs font-black uppercase tracking-widest">Market Gap reaching critical</p>
                     </div>
                 </div>
                 <p class="text-amber-900/80 text-sm font-medium leading-relaxed mb-6">
                     Competitors have dropped prices by an average of <span class="font-black italic">5.2¢</span>. 
                     Gallon velocity may drop <span class="font-black text-amber-600">12%</span> if not adjusted.
                 </p>
-                <button @click="activeTab = 'price-watch'" class="w-full py-4 bg-amber-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-700 transition-all shadow-xl shadow-amber-600/20">
+                <button @click="activeTab = 'price-watch'" class="w-full py-4 bg-amber-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-amber-700 transition-all shadow-xl shadow-amber-600/20">
                     Audit Pump Prices
                 </button>
             </div>
@@ -588,7 +588,7 @@ const historicalVolumeData = computed(() => {
                     </div>
                     <div>
                         <h3 class="text-xl font-black text-slate-900 uppercase italic tracking-tighter">Inventory Optimization</h3>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Load consolidation suggestions</p>
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-widest">Load consolidation suggestions</p>
                     </div>
                 </div>
                 
@@ -597,14 +597,14 @@ const historicalVolumeData = computed(() => {
                          class="p-6 bg-slate-50 rounded-3xl border border-slate-100 group-hover:border-primary-200 transition-colors">
                         <div class="flex items-center justify-between mb-4">
                             <span class="text-xs font-black text-slate-900 uppercase">{{ tank.type }} Segment</span>
-                            <span class="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-600 text-[8px] font-black uppercase">Favorable Load</span>
+                            <span class="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-600 text-[10px] font-black uppercase">Favorable Load</span>
                         </div>
                         <p class="text-xs text-slate-500 font-medium leading-relaxed">
                             Current Ullage is <span class="text-slate-900 font-black">{{ tank.ullage.toLocaleString() }} GAL</span>. 
                             You can accept a full transport load immediately to lower weighted average cost.
                         </p>
                         <div class="mt-4 flex gap-2">
-                           <button @click="activeTab = 'orders'" class="px-4 py-2 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest">Prepare PO</button>
+                           <button @click="activeTab = 'orders'" class="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest">Prepare PO</button>
                         </div>
                     </div>
                     <div v-if="logisticsSummary.filter(t => t.ullage >= 6000).length === 0" class="p-10 text-center italic text-slate-400 text-sm">
@@ -621,7 +621,7 @@ const historicalVolumeData = computed(() => {
                     </div>
                     <div>
                         <h3 class="text-xl font-black text-slate-900 uppercase italic tracking-tighter">Yield Opportunities</h3>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Margin & Volume balancing</p>
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-widest">Margin & Volume balancing</p>
                     </div>
                 </div>
 
@@ -630,7 +630,7 @@ const historicalVolumeData = computed(() => {
                          class="p-6 bg-slate-50 rounded-3xl border border-slate-100">
                         <div class="flex items-center justify-between mb-2">
                              <span class="text-xs font-black text-slate-900 uppercase">{{ price.type }} Pricing</span>
-                             <span class="px-2 py-0.5 rounded-lg bg-primary-100 text-primary-600 text-[8px] font-black uppercase">Margin Opportunity</span>
+                             <span class="px-2 py-0.5 rounded-lg bg-primary-100 text-primary-600 text-[10px] font-black uppercase">Margin Opportunity</span>
                         </div>
                         <p class="text-xs text-slate-500 font-medium leading-relaxed">
                             You are <span class="text-emerald-500 font-black">{{ Math.abs(price.diff).toFixed(1) }}¢</span> cheaper than market average. 
@@ -644,7 +644,7 @@ const historicalVolumeData = computed(() => {
 
                 <div class="mt-10 p-8 bg-slate-900 text-white rounded-[2.5rem] relative overflow-hidden group">
                     <div class="relative z-10">
-                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Projected Daily Volume Pool</p>
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Projected Daily Volume Pool</p>
                         <h4 class="text-4xl font-black tabular-nums tracking-tighter">~{{ historicalVolumeData[historicalVolumeData.length-1]?.volume?.toLocaleString() || '0' }} <span class="text-xs">GAL</span></h4>
                     </div>
                 </div>
@@ -664,18 +664,18 @@ const historicalVolumeData = computed(() => {
                 </div>
                 <div>
                    <h2 class="text-3xl font-[1000] text-white uppercase italic tracking-tighter leading-none">AI Price Strategist</h2>
-                   <p class="text-white/80 text-[10px] font-black uppercase tracking-widest mt-3">Live Market Recommendations & Aggressor Alerts</p>
+                   <p class="text-white/80 text-xs font-black uppercase tracking-widest mt-3">Live Market Recommendations & Aggressor Alerts</p>
                 </div>
             </div>
             <div class="relative z-10 flex gap-4 overflow-x-auto pb-2 w-full lg:w-auto">
                <div v-for="rec in aiRecommendations" :key="rec.type" 
                     class="min-w-[280px] p-6 bg-white/10 backdrop-blur-xl rounded-[2rem] border border-white/20 transition-all hover:bg-white/20">
                   <div class="flex items-center justify-between mb-4">
-                     <span class="text-[10px] font-black uppercase tracking-widest text-primary-200">{{ rec.type }}</span>
-                     <span class="px-2 py-1 rounded-lg bg-white/20 text-[8px] font-black uppercase">{{ rec.action }}</span>
+                     <span class="text-xs font-black uppercase tracking-widest text-primary-200">{{ rec.type }}</span>
+                     <span class="px-2 py-1 rounded-lg bg-white/20 text-[10px] font-black uppercase">{{ rec.action }}</span>
                   </div>
                   <h4 class="text-2xl font-black text-white tabular-nums mb-2">${{ rec.recommended.toFixed(3) }}</h4>
-                  <p class="text-[9px] font-medium text-white/70 italic leading-relaxed">{{ rec.reason }}</p>
+                  <p class="text-xs font-medium text-white/70 italic leading-relaxed">{{ rec.reason }}</p>
                </div>
             </div>
         </div>
@@ -686,7 +686,7 @@ const historicalVolumeData = computed(() => {
                 <div class="flex items-center justify-between mb-10">
                     <div>
                         <h3 class="text-xl font-black text-slate-900 uppercase italic tracking-tighter">Your Current Terminal Pricing</h3>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Manage live pump prices directly</p>
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">Manage live pump prices directly</p>
                     </div>
                 </div>
 
@@ -694,15 +694,15 @@ const historicalVolumeData = computed(() => {
                     <div v-for="price in fuelStore.currentPrices" :key="price.type" class="p-8 pb-6 rounded-[2.5rem] border-2 border-slate-50 hover:border-slate-200 transition-all group relative">
                         <!-- Alert Badge -->
                         <div v-if="marketPosition.find(p => p.type === price.type)" 
-                             class="absolute top-4 right-4 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border"
+                             class="absolute top-4 right-4 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border"
                              :class="getPriceStatusColor(marketPosition.find(p => p.type === price.type)?.status || '')">
                              {{ marketPosition.find(p => p.type === price.type)?.status }}
                         </div>
 
-                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">{{ price.type }}</div>
+                        <div class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">{{ price.type }}</div>
                         <div class="space-y-4">
                             <div class="space-y-1.5">
-                                <label class="text-[8px] font-black text-slate-300 uppercase tracking-widest ml-1">Cash Price</label>
+                                <label class="text-xs font-black text-slate-300 uppercase tracking-widest ml-1">Cash Price</label>
                                 <div class="relative">
                                     <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
                                     <input v-model.number="price.cashPrice" type="number" step="0.001" class="modern-input h-12 pl-8 text-sm" @change="fuelStore.updateCurrentPrice(price)" />
@@ -710,8 +710,8 @@ const historicalVolumeData = computed(() => {
                             </div>
                             <div class="flex items-center justify-between pt-4 border-t border-slate-50 mt-4">
                                <div class="flex flex-col">
-                                   <span class="text-[10px] font-bold text-slate-400">Margin</span>
-                                   <span class="text-[8px] font-black text-slate-300 uppercase italic">MTD Avg</span>
+                                   <span class="text-xs font-bold text-slate-400">Margin</span>
+                                   <span class="text-[10px] font-black text-slate-300 uppercase italic">MTD Avg</span>
                                </div>
                                <span class="text-lg font-black text-emerald-600 tabular-nums">{{ (price.margin * 100).toFixed(1) }}¢</span>
                             </div>
@@ -726,11 +726,11 @@ const historicalVolumeData = computed(() => {
                     <div>
                         <div class="flex items-center gap-3">
                             <h3 class="text-xl font-black text-slate-900 uppercase italic tracking-tighter">Perimeter Market Scan</h3>
-                            <span class="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[8px] font-black uppercase tracking-widest">Zip: {{ locationsStore.activeLocation?.zipCode || 'N/A' }}</span>
+                            <span class="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest">Zip: {{ locationsStore.activeLocation?.zipCode || 'N/A' }}</span>
                         </div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Direct competitor tracking and survey</p>
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">Direct competitor tracking and survey</p>
                     </div>
-                    <button @click="addNewCompetitor" class="px-6 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-600 transition-all flex items-center gap-2 shadow-xl">
+                    <button @click="addNewCompetitor" class="px-6 py-3 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-primary-600 transition-all flex items-center gap-2 shadow-xl">
                         <Plus class="w-4 h-4" /> Add Station
                     </button>
                 </div>
@@ -742,7 +742,7 @@ const historicalVolumeData = computed(() => {
                                 <div class="w-14 h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-xl font-black text-slate-300">{{ comp.competitorName[0] }}</div>
                                 <div>
                                     <input v-model="comp.competitorName" class="bg-transparent border-none text-lg font-black text-slate-900 outline-none p-0 focus:ring-0 h-7" @change="fuelStore.updateCompetitorPrice(comp)" />
-                                    <input v-model="comp.distance" class="bg-transparent border-none text-[9px] font-black text-slate-400 uppercase tracking-widest outline-none p-0 focus:ring-0 w-32" @change="fuelStore.updateCompetitorPrice(comp)" />
+                                    <input v-model="comp.distance" class="bg-transparent border-none text-[11px] font-black text-slate-400 uppercase tracking-widest outline-none p-0 focus:ring-0 w-32" @change="fuelStore.updateCompetitorPrice(comp)" />
                                 </div>
                             </div>
                             <button @click="removeCompetitor(comp.id)" class="p-3 text-slate-200 hover:text-rose-500 transition-colors">
@@ -751,9 +751,9 @@ const historicalVolumeData = computed(() => {
                         </div>
                         <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
                             <div v-for="p in comp.prices" :key="p.type" class="bg-white p-4 rounded-2xl border border-slate-100 flex flex-col items-center">
-                                <span class="text-[8px] font-black text-slate-400 uppercase mb-2">{{ p.type }}</span>
+                                <span class="text-[10px] font-black text-slate-400 uppercase mb-2">{{ p.type }}</span>
                                 <div class="flex items-baseline">
-                                    <span class="text-slate-300 text-[10px] font-bold mr-1">$</span>
+                                    <span class="text-slate-300 text-xs font-bold mr-1">$</span>
                                     <input v-model.number="p.price" type="number" step="0.001" class="w-full bg-transparent border-none p-0 text-sm font-black text-slate-900 text-center focus:ring-0" @change="fuelStore.updateCompetitorPrice(comp)" />
                                 </div>
                             </div>
@@ -774,7 +774,7 @@ const historicalVolumeData = computed(() => {
                     </div>
                     <div>
                         <h3 class="text-lg font-black text-slate-900 uppercase italic leading-none">Tank Report Date</h3>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5">{{ selectedDate }}</p>
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1.5">{{ selectedDate }}</p>
                     </div>
                 </div>
                 <div class="flex items-center bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
@@ -790,7 +790,7 @@ const historicalVolumeData = computed(() => {
                         <LayoutGrid class="w-6 h-6 text-slate-300" />
                         <h3 class="text-xl font-black text-slate-900 uppercase italic tracking-tighter">Underground Inventory Audit</h3>
                     </div>
-                    <button @click="saveInventory" :disabled="isSubmitting" class="group px-8 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-3 shadow-xl">
+                    <button @click="saveInventory" :disabled="isSubmitting" class="group px-8 py-4 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-3 shadow-xl">
                         <Save v-if="!isSubmitting" class="w-4 h-4" />
                         <Loader2 v-else class="w-4 h-4 animate-spin" />
                         <span>Commit Records</span>
@@ -799,7 +799,7 @@ const historicalVolumeData = computed(() => {
 
                 <div class="overflow-x-auto">
                     <table class="w-full text-left">
-                        <thead class="bg-slate-50 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                        <thead class="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest">
                             <tr>
                                 <th class="px-10 py-5">Product</th>
                                 <th class="px-6 py-5 text-center">Opening</th>
@@ -848,7 +848,7 @@ const historicalVolumeData = computed(() => {
                         ]"
                     >
                         <Paperclip class="w-8 h-8 mx-auto mb-4" :class="atgImageFile ? 'text-emerald-500' : 'text-slate-300 group-hover:text-primary-500'" />
-                        <span class="text-[10px] font-black uppercase tracking-widest" :class="atgImageFile ? 'text-emerald-700' : 'text-slate-400'">
+                        <span class="text-xs font-black uppercase tracking-widest" :class="atgImageFile ? 'text-emerald-700' : 'text-slate-400'">
                             {{ atgImageFile ? atgImageFile.name : 'Upload Report' }}
                         </span>
                         <input type="file" ref="atgInput" class="hidden" @change="(e: any) => atgImageFile = e.target.files[0]" />
@@ -867,11 +867,11 @@ const historicalVolumeData = computed(() => {
                 <div class="space-y-8">
                     <div class="grid grid-cols-2 gap-6">
                         <div class="space-y-2">
-                             <label class="text-[9px] font-black uppercase text-slate-400">Reference #</label>
+                             <label class="text-xs font-black uppercase text-slate-400">Reference #</label>
                              <input v-model="newOrder.orderNumber" class="modern-input" />
                         </div>
                         <div class="space-y-2">
-                             <label class="text-[9px] font-black uppercase text-slate-400">Supplier</label>
+                             <label class="text-xs font-black uppercase text-slate-400">Supplier</label>
                              <input v-model="newOrder.supplier" class="modern-input" />
                         </div>
                     </div>
@@ -884,16 +884,16 @@ const historicalVolumeData = computed(() => {
                             <Plus class="w-5 h-5" />
                         </button>
                     </div>
-                    <button @click="saveOrder" class="w-full py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-600 transition-all">Submit PO to Terminal</button>
+                    <button @click="saveOrder" class="w-full py-5 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-primary-600 transition-all">Submit PO to Terminal</button>
                 </div>
                 <div class="bg-slate-50 rounded-[2.5rem] p-8 overflow-y-auto max-h-[500px] border border-slate-100">
-                   <h4 class="text-xs font-black uppercase tracking-widest mb-6">Dispatched Queue</h4>
+                   <h4 class="text-sm font-black uppercase tracking-widest mb-6">Dispatched Queue</h4>
                    <div v-for="order in fuelStore.orders" :key="order.id" class="p-4 bg-white rounded-2xl border border-slate-100 mb-4">
                       <div class="flex justify-between items-center">
-                         <span class="text-[10px] font-black">{{ order.supplier }}</span>
-                         <span class="text-[8px] font-black px-2 py-1 bg-amber-50 rounded">{{ order.status }}</span>
+                         <span class="text-xs font-black">{{ order.supplier }}</span>
+                         <span class="text-[10px] font-black px-2 py-1 bg-amber-50 rounded">{{ order.status }}</span>
                       </div>
-                      <p class="text-[9px] font-bold text-slate-400 mt-2">{{ order.items.map(i => `${i.gallons} GAL ${i.type}`).join(', ') }}</p>
+                      <p class="text-[11px] font-bold text-slate-400 mt-2">{{ order.items.map(i => `${i.gallons} GAL ${i.type}`).join(', ') }}</p>
                    </div>
                 </div>
             </div>
@@ -904,7 +904,7 @@ const historicalVolumeData = computed(() => {
         <div class="bg-white border-2 border-slate-100 rounded-[3rem] p-12">
             <div class="flex items-center justify-between mb-10">
                 <h3 class="text-2xl font-black italic uppercase tracking-tighter">Liquid Bill Entry</h3>
-                <button @click="saveInvoice" class="px-10 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-600 transition-all">Save Invoice</button>
+                <button @click="saveInvoice" class="px-10 py-4 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-primary-600 transition-all">Save Invoice</button>
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
                 <div class="space-y-6">
@@ -921,10 +921,10 @@ const historicalVolumeData = computed(() => {
                     >
                        <Paperclip class="w-10 h-10" :class="invoiceImageFile ? 'text-emerald-500' : 'text-slate-300'" />
                        <div class="space-y-1">
-                           <p class="text-[10px] font-black uppercase tracking-widest" :class="invoiceImageFile ? 'text-emerald-700' : 'text-slate-400'">
+                           <p class="text-xs font-black uppercase tracking-widest" :class="invoiceImageFile ? 'text-emerald-700' : 'text-slate-400'">
                                {{ invoiceImageFile ? invoiceImageFile.name : 'Drop BOL Snapshot or PDF' }}
                            </p>
-                           <p v-if="!invoiceImageFile" class="text-[8px] font-bold text-slate-300 uppercase italic">Or click to browse terminal files</p>
+                           <p v-if="!invoiceImageFile" class="text-[10px] font-bold text-slate-300 uppercase italic">Or click to browse terminal files</p>
                        </div>
                        <input type="file" ref="invoiceInput" @change="(e: any) => invoiceImageFile = e.target.files[0]" class="hidden" accept="image/*,.pdf" />
                     </div>
@@ -938,13 +938,13 @@ const historicalVolumeData = computed(() => {
                         <button 
                             @click="handleAiScan" 
                             :disabled="isAiProcessing"
-                            class="flex-1 py-4 bg-primary-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-700 transition-all flex items-center justify-center gap-3 shadow-lg shadow-primary-500/20"
+                            class="flex-1 py-4 bg-primary-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-primary-700 transition-all flex items-center justify-center gap-3 shadow-lg shadow-primary-500/20"
                         >
                             <Sparkles v-if="!isAiProcessing" class="w-4 h-4" />
                             <Loader2 v-else class="w-4 h-4 animate-spin" />
                             <span>{{ isAiProcessing ? 'Analyzing BOL...' : 'Extract with AI (99.9% Accuracy)' }}</span>
                         </button>
-                        <button @click="invoiceImageFile = null" class="px-6 py-4 bg-white text-slate-400 rounded-2xl text-[10px] font-black uppercase hover:text-rose-500 transition-colors">Clear</button>
+                        <button @click="invoiceImageFile = null" class="px-6 py-4 bg-white text-slate-400 rounded-2xl text-xs font-black uppercase hover:text-rose-500 transition-colors">Clear</button>
                     </div>
 
                     <div v-for="(item, idx) in newInvoice.items" :key="idx" class="p-6 bg-slate-50 rounded-2xl grid grid-cols-2 gap-4 relative group">
@@ -961,11 +961,11 @@ const historicalVolumeData = computed(() => {
                     </div>
                 </div>
                 <div class="space-y-4">
-                   <h4 class="text-[10px] font-black uppercase tracking-widest mb-4">Historical Billing</h4>
+                   <h4 class="text-xs font-black uppercase tracking-widest mb-4">Historical Billing</h4>
                    <div v-for="inv in fuelStore.invoices" :key="inv.id" class="p-6 bg-white border border-slate-100 rounded-3xl flex justify-between items-center">
                       <div>
-                         <p class="text-xs font-black">{{ inv.supplier }}</p>
-                         <p class="text-[8px] font-bold text-slate-400 uppercase mt-1">{{ inv.invoiceNumber }} • {{ inv.date ? new Date(inv.date).toLocaleDateString() : 'N/A' }}</p>
+                         <p class="text-sm font-black">{{ inv.supplier }}</p>
+                         <p class="text-[10px] font-bold text-slate-400 uppercase mt-1">{{ inv.invoiceNumber }} • {{ inv.date ? new Date(inv.date).toLocaleDateString() : 'N/A' }}</p>
                       </div>
                       <span class="text-sm font-black tabular-nums">${{ inv.totalAmount.toLocaleString() }}</span>
                    </div>

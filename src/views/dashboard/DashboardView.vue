@@ -464,7 +464,7 @@ const greeting = computed(() => {
 }
 
 .greeting-label {
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -485,7 +485,7 @@ const greeting = computed(() => {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: #94a3b8;
   margin: 0;
@@ -504,7 +504,7 @@ const greeting = computed(() => {
   background: #f0fdf4;
   border: 1px solid #bbf7d0;
   color: #16a34a;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -531,9 +531,9 @@ const greeting = computed(() => {
   gap: 0.4rem;
   background: #294470;
   color: white;
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   font-weight: 700;
-  padding: 0.55rem 1.1rem;
+  padding: 0.65rem 1.25rem;
   border-radius: 0.75rem;
   text-decoration: none;
   transition: all 0.2s;
@@ -603,7 +603,7 @@ const greeting = computed(() => {
 
 .kpi-label {
   display: block;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -624,7 +624,7 @@ const greeting = computed(() => {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 700;
   margin-top: 0.3rem;
 }
@@ -633,7 +633,7 @@ const greeting = computed(() => {
 .trend-down { color: #dc2626; }
 
 .kpi-sub {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: #94a3b8;
   margin-top: 0.3rem;
@@ -702,7 +702,7 @@ const greeting = computed(() => {
 }
 
 .chart-sub {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: #94a3b8;
   text-transform: uppercase;
@@ -714,7 +714,7 @@ const greeting = computed(() => {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: #294470;
   text-decoration: none;
@@ -744,7 +744,7 @@ const greeting = computed(() => {
 }
 
 .stat-pill-label {
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -788,7 +788,7 @@ const greeting = computed(() => {
 }
 
 .bar-value-label {
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: #94a3b8;
   white-space: nowrap;
@@ -812,7 +812,7 @@ const greeting = computed(() => {
 .bar-today   { background: linear-gradient(180deg, #294470 0%, #315bb9 100%); box-shadow: 0 4px 12px -2px rgba(41,68,112,0.3); }
 
 .bar-label {
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: #94a3b8;
   text-transform: uppercase;
@@ -845,7 +845,7 @@ const greeting = computed(() => {
 }
 
 .panel-section-label {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -870,7 +870,7 @@ const greeting = computed(() => {
   border-radius: 1rem;
   cursor: pointer;
   transition: all 0.2s;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: #475569;
   text-transform: uppercase;
@@ -941,7 +941,7 @@ const greeting = computed(() => {
 }
 
 .panel-sub {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: #94a3b8;
   margin: 0;
@@ -963,7 +963,7 @@ const greeting = computed(() => {
   gap: 0.75rem;
   padding: 0.625rem 1rem;
   background: #f8fafc;
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -990,7 +990,7 @@ const greeting = computed(() => {
 .table-row:hover { background: #fafbff; }
 
 .row-date {
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: #334155;
 }
@@ -1001,7 +1001,7 @@ const greeting = computed(() => {
   justify-content: center;
   background: #f0f4fc;
   color: #294470;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1038,10 +1038,10 @@ const greeting = computed(() => {
 }
 
 .row-pct {
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: #94a3b8;
-  width: 30px;
+  width: 40px;
   text-align: right;
 }
 
@@ -1053,7 +1053,7 @@ const greeting = computed(() => {
   gap: 0.5rem;
   padding: 2.5rem 1rem;
   color: #cbd5e1;
-  font-size: 0.72rem;
+  font-size: 0.85rem;
   font-weight: 600;
 }
 

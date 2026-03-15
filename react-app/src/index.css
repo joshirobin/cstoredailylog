@@ -4,10 +4,23 @@
 @tailwind utilities;
 
 @layer base {
+    :root {
+        font-size: 16px;
+    }
     body {
         @apply antialiased text-slate-800 bg-slate-50;
         font-family: 'Inter', system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
     }
+}
+
+/* Fix text blurriness on glassmorphism elements */
+[class*="backdrop-blur"] {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
 }
 
 @layer components {

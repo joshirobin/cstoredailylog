@@ -166,7 +166,7 @@ const updateTaskStatus = async (id: string, currentStatus: string) => {
         <div class="glass-panel p-10 flex flex-col items-center text-center space-y-10 bg-white overflow-hidden relative shadow-2xl">
             <!-- Live Clock Display -->
             <div class="space-y-2">
-                <p class="text-[10px] font-black text-primary-600 uppercase tracking-[0.5em] ml-1">Universal Time</p>
+                <p class="text-xs font-black text-primary-600 uppercase tracking-[0.5em] ml-1">Universal Time</p>
                 <p class="text-6xl font-black text-slate-900 font-mono tracking-tighter">
                     {{ currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) }}
                 </p>
@@ -180,7 +180,7 @@ const updateTaskStatus = async (id: string, currentStatus: string) => {
             <!-- Employee Selection -->
             <div class="w-full space-y-6 pt-10 border-t border-slate-50">
                 <div class="space-y-2 text-left">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Identify Employee</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-2">Identify Employee</label>
                     <div class="relative group">
                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <User class="w-5 h-5 text-slate-300 group-focus-within:text-primary-500 transition-colors" />
@@ -206,7 +206,7 @@ const updateTaskStatus = async (id: string, currentStatus: string) => {
 
                 <!-- PIN Input -->
                 <div v-if="selectedEmployeeId && activeEmployee?.pin" class="space-y-2 text-left animate-in fade-in slide-in-from-top-2">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Enter PIN</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-2">Enter PIN</label>
                     <input 
                         v-model="enteredPin" 
                         type="password" 
@@ -229,7 +229,7 @@ const updateTaskStatus = async (id: string, currentStatus: string) => {
                     </template>
                     <template v-else>
                         <component :is="timesheetsStore.activeLog ? LogOut : LogIn" class="w-10 h-10 mb-2 group-hover:scale-110 transition-transform duration-500" />
-                        <span class="text-[10px] font-black uppercase tracking-[0.4em] opacity-80 leading-none">
+                        <span class="text-xs font-black uppercase tracking-[0.4em] opacity-80 leading-none">
                             {{ timesheetsStore.activeLog ? 'Shift Active' : 'Available for Duty' }}
                         </span>
                         <span class="text-2xl font-black uppercase italic tracking-tighter">
@@ -246,12 +246,12 @@ const updateTaskStatus = async (id: string, currentStatus: string) => {
                         <Timer class="w-6 h-6 animate-pulse" />
                     </div>
                     <div class="text-left">
-                        <p class="text-[10px] font-black text-emerald-600/60 uppercase tracking-widest">Shift Start</p>
+                        <p class="text-xs font-black text-emerald-600/60 uppercase tracking-widest">Shift Start</p>
                         <p class="text-lg font-black text-slate-900 tracking-tighter">{{ formatTime(timesheetsStore.activeLog.clockIn) }}</p>
                     </div>
                 </div>
                 <div class="text-right">
-                    <p class="text-[10px] font-black text-emerald-600/60 uppercase tracking-widest">Live Earned</p>
+                    <p class="text-xs font-black text-emerald-600/60 uppercase tracking-widest">Live Earned</p>
                     <p v-if="timesheetsStore.activeLog?.clockIn && typeof timesheetsStore.activeLog.clockIn.toDate === 'function'" class="text-2xl font-black text-emerald-600 font-mono tracking-tighter">
                         ${{ (( (currentTime.getTime() - timesheetsStore.activeLog.clockIn.toDate().getTime()) / (1000 * 60 * 60) ) * (activeEmployee?.hourlyRate || 0)).toFixed(2) }}
                     </p>
@@ -274,11 +274,11 @@ const updateTaskStatus = async (id: string, currentStatus: string) => {
                     </div>
                     <div>
                         <h3 class="text-xl font-black text-slate-900 italic uppercase tracking-tighter">Shift Tasks</h3>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Personal Action Items</p>
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-widest">Personal Action Items</p>
                     </div>
                 </div>
                 <div v-if="selectedEmployeeId" class="flex items-center gap-2">
-                    <span class="bg-primary-50 text-primary-700 px-4 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm">
+                    <span class="bg-primary-50 text-primary-700 px-4 py-1.5 rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm">
                         {{ myTasks.length }} Active
                     </span>
                 </div>
@@ -290,7 +290,7 @@ const updateTaskStatus = async (id: string, currentStatus: string) => {
                         <User class="w-10 h-10 text-slate-300" />
                     </div>
                     <p class="text-slate-500 font-bold uppercase tracking-widest text-xs">Identification Required</p>
-                    <p class="text-slate-400 text-[10px] mt-1 max-w-[200px]">Select your name to view your assigned tasks for this shift.</p>
+                    <p class="text-slate-400 text-xs mt-1 max-w-[200px]">Select your name to view your assigned tasks for this shift.</p>
                 </div>
 
                 <div v-else-if="tasksStore.loading" class="h-80 flex items-center justify-center">
@@ -302,7 +302,7 @@ const updateTaskStatus = async (id: string, currentStatus: string) => {
                         <CheckCircle2 class="w-10 h-10 text-emerald-400" />
                     </div>
                     <p class="text-emerald-800 font-black uppercase tracking-widest text-xs">Duty Clear!</p>
-                    <p class="text-slate-400 text-[10px] mt-1">Outstanding tasks have been completed.</p>
+                    <p class="text-slate-400 text-xs mt-1">Outstanding tasks have been completed.</p>
                 </div>
 
                 <div v-else class="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
@@ -314,8 +314,8 @@ const updateTaskStatus = async (id: string, currentStatus: string) => {
                         <div class="flex items-start justify-between gap-6">
                             <div class="flex-1 space-y-1">
                                 <div class="flex items-center gap-3 mb-2">
-                                    <span v-if="task.priority === 'URGENT'" class="px-3 py-1 bg-rose-500 text-white rounded-lg text-[8px] font-black uppercase tracking-widest shadow-lg shadow-rose-200 animate-pulse">Urgent</span>
-                                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Target: {{ task.title }}</span>
+                                    <span v-if="task.priority === 'URGENT'" class="px-3 py-1 bg-rose-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-200 animate-pulse">Urgent</span>
+                                    <span class="text-xs font-black text-slate-400 uppercase tracking-widest">Target: {{ task.title }}</span>
                                 </div>
                                 <p class="text-base font-black text-slate-900 italic tracking-tighter uppercase line-clamp-1">{{ task.title }}</p>
                                 <p class="text-xs font-medium text-slate-500 line-clamp-2 leading-relaxed">{{ task.description }}</p>
@@ -334,17 +334,17 @@ const updateTaskStatus = async (id: string, currentStatus: string) => {
             </div>
 
             <div class="mt-8 pt-8 border-t border-slate-50 flex items-center justify-between">
-                <button @click="$router.push('/tasks')" class="text-[10px] font-black text-primary-600 uppercase tracking-widest hover:text-primary-800 transition-colors">Go to Task Board</button>
+                <button @click="$router.push('/tasks')" class="text-xs font-black text-primary-600 uppercase tracking-widest hover:text-primary-800 transition-colors">Go to Task Board</button>
                 <div class="flex items-center gap-2">
                     <History class="w-4 h-4 text-slate-300" />
-                    <span class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">History Log Beneath</span>
+                    <span class="text-xs font-bold text-slate-300 uppercase tracking-widest">History Log Beneath</span>
                 </div>
             </div>
         </div>
 
         <!-- Recent Logs (Mini Strip) -->
         <div v-if="selectedEmployeeId" class="glass-panel p-6 bg-slate-50 border-2 border-white shadow-xl overflow-x-auto">
-            <div v-if="timesheetsStore.timeLogs.length === 0 && !timesheetsStore.loading" class="text-center py-4 text-slate-400 font-black uppercase text-[10px] tracking-widest">
+            <div v-if="timesheetsStore.timeLogs.length === 0 && !timesheetsStore.loading" class="text-center py-4 text-slate-400 font-black uppercase text-xs tracking-widest">
                 No recent shift history for this employee
             </div>
             <div v-else class="flex gap-4 min-w-max pb-2">
@@ -357,7 +357,7 @@ const updateTaskStatus = async (id: string, currentStatus: string) => {
                         <User class="w-5 h-5 text-slate-400" />
                     </div>
                     <div>
-                        <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">{{ formatDate(log.clockIn) }}</p>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ formatDate(log.clockIn) }}</p>
                         <p class="text-xs font-black text-slate-800">{{ log.totalHours ? `${log.totalHours}h` : 'Shift Active' }}</p>
                     </div>
                 </div>

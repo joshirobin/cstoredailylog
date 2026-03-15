@@ -317,28 +317,28 @@ const totalSalesThisMonth = computed(() => {
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-3xl font-black text-slate-900 uppercase italic tracking-tighter">Daily Sales Registry</h1>
-          <p class="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Global activity & financial audit terminal</p>
+          <p class="text-slate-500 text-xs font-bold uppercase tracking-[0.2em] mt-1">Global activity & financial audit terminal</p>
         </div>
         
         <div class="flex items-center gap-4">
           <div class="glass-card p-6 flex items-center gap-5">
             <div class="p-4 rounded-2xl bg-blue-50 text-blue-600"><Wallet class="w-5 h-5" /></div>
             <div>
-              <p class="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1.5">Net Sales (7D)</p>
+              <p class="text-xs text-slate-400 font-black uppercase tracking-[0.2em] mb-1.5">Net Sales (7D)</p>
               <p class="text-2xl font-black font-mono tracking-tighter text-slate-900">${{ totalSalesThisWeek.toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</p>
             </div>
           </div>
           <div class="glass-card p-6 flex items-center gap-5">
             <div class="p-4 rounded-2xl bg-purple-50 text-purple-600"><TrendingUp class="w-5 h-5" /></div>
             <div>
-              <p class="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1.5">Net Sales (Month)</p>
+              <p class="text-xs text-slate-400 font-black uppercase tracking-[0.2em] mb-1.5">Net Sales (Month)</p>
               <p class="text-2xl font-black font-mono tracking-tighter text-slate-900">${{ totalSalesThisMonth.toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</p>
             </div>
           </div>
           <div class="glass-card p-6 flex items-center gap-5">
             <div class="p-4 rounded-2xl bg-amber-50 text-amber-600"><HistoryIcon class="w-5 h-5" /></div>
             <div>
-              <p class="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1.5">Active Logs</p>
+              <p class="text-xs text-slate-400 font-black uppercase tracking-[0.2em] mb-1.5">Active Logs</p>
               <p class="text-2xl font-black font-mono tracking-tighter text-slate-900">{{ salesStore.logs.length }} records</p>
             </div>
           </div>
@@ -362,7 +362,7 @@ const totalSalesThisMonth = computed(() => {
             </div>
             <div>
               <h3 class="text-slate-900 font-black text-lg leading-tight uppercase italic">{{ editingLogId ? 'Modify Record' : 'Create New Log' }}</h3>
-              <p class="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">Processing for: <span class="text-primary-600">{{ selectedDate }}</span></p>
+              <p class="text-slate-500 text-xs font-bold uppercase tracking-widest mt-0.5">Processing for: <span class="text-primary-600">{{ selectedDate }}</span></p>
             </div>
           </div>
 
@@ -391,7 +391,7 @@ const totalSalesThisMonth = computed(() => {
             <div class="p-6 space-y-6">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="space-y-4">
-                  <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Shift Expenses / Payouts</label>
+                  <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Shift Expenses / Payouts</label>
                   <div class="relative group">
                     <div class="absolute left-4 top-4 text-slate-300 group-focus-within:text-rose-500 transition-colors pointer-events-none">$</div>
                     <input v-model.number="currentLogForm.expenses" type="number" step="0.01" class="no-spinner modern-input pl-10 text-lg font-black text-rose-600 bg-rose-50/30 placeholder-rose-200" placeholder="0.00" />
@@ -401,12 +401,12 @@ const totalSalesThisMonth = computed(() => {
                   <div class="grid grid-cols-2 gap-4 pt-2">
                     <!-- Lotto Report -->
                     <div class="space-y-2">
-                      <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Lotto Report</label>
+                      <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Lotto Report</label>
                       <div class="flex items-center gap-2">
                          <label class="flex-1 cursor-pointer">
                             <div class="flex items-center gap-2 px-3 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-white transition-all group">
                                 <Paperclip class="w-3.5 h-3.5 text-slate-400 group-hover:text-primary-500" />
-                                <span class="text-[9px] font-black text-slate-500 uppercase truncate">{{ lottoFile ? lottoFile.name : (lottoUrl ? 'Replace' : 'Attach') }}</span>
+                                <span class="text-xs font-black text-slate-500 uppercase truncate">{{ lottoFile ? lottoFile.name : (lottoUrl ? 'Replace' : 'Attach') }}</span>
                             </div>
                             <input type="file" @change="handleLottoFile" class="hidden" accept="image/*,application/pdf" />
                          </label>
@@ -414,12 +414,12 @@ const totalSalesThisMonth = computed(() => {
                     </div>
                     <!-- Other Report -->
                     <div class="space-y-2">
-                      <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Global Report</label>
+                      <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Global Report</label>
                       <div class="flex items-center gap-2">
                          <label class="flex-1 cursor-pointer">
                             <div class="flex items-center gap-2 px-3 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-white transition-all group">
                                 <FileText class="w-3.5 h-3.5 text-slate-400 group-hover:text-primary-500" />
-                                <span class="text-[9px] font-black text-slate-500 uppercase truncate">{{ otherFile ? otherFile.name : (otherUrl ? 'Replace' : 'Attach') }}</span>
+                                <span class="text-xs font-black text-slate-500 uppercase truncate">{{ otherFile ? otherFile.name : (otherUrl ? 'Replace' : 'Attach') }}</span>
                             </div>
                             <input type="file" @change="handleOtherFile" class="hidden" accept="image/*,application/pdf" />
                          </label>
@@ -428,7 +428,7 @@ const totalSalesThisMonth = computed(() => {
                   </div>
                 </div>
                 <div class="space-y-4">
-                   <label class="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] italic block mb-2">Detailed Reconciliation Notes</label>
+                   <label class="text-xs font-black text-slate-900 uppercase tracking-[0.2em] italic block mb-2">Detailed Reconciliation Notes</label>
                    <textarea v-model="currentLogForm.notes" class="w-full h-64 bg-slate-50 border-2 border-slate-100 rounded-3xl p-8 text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-primary-500 transition-all resize-none shadow-inner leading-relaxed" placeholder="Record shift discrepancies, maintenance issues, or important management updates here..."></textarea>
                 </div>
               </div>
@@ -465,17 +465,17 @@ const totalSalesThisMonth = computed(() => {
                    <h3 class="text-lg font-black text-slate-900 uppercase italic">Archives</h3>
                 </div>
 
-                <div class="bg-slate-100/50 px-3 py-1 rounded-full text-[10px] font-black text-slate-400 tracking-tighter">{{ filteredLogs.length }} RECORDS</div>
+                <div class="bg-slate-100/50 px-3 py-1 rounded-full text-xs font-black text-slate-400 tracking-tighter">{{ filteredLogs.length }} RECORDS</div>
              </div>
 
              <!-- Mini Filter Tabs -->
              <div class="flex flex-wrap gap-2 mb-8">
                <button v-for="f in (['today', 'week', 'month'] as const)" :key="f"
                  @click="selectedFilter = f"
-                 class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                 class="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
                  :class="selectedFilter === f ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/20' : 'bg-slate-50/50 text-slate-400 hover:text-primary-600'"
                >{{ f }}</button>
-               <button @click="selectedFilter = 'all'" class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all" :class="selectedFilter === 'all' ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/20' : 'bg-slate-50/50 text-slate-400 hover:text-primary-600'">All</button>
+               <button @click="selectedFilter = 'all'" class="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all" :class="selectedFilter === 'all' ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/20' : 'bg-slate-50/50 text-slate-400 hover:text-primary-600'">All</button>
              </div>
 
              <!-- Scrolled Logs List -->
@@ -486,29 +486,29 @@ const totalSalesThisMonth = computed(() => {
                 >
                    <div class="flex items-center justify-between">
                       <div>
-                        <div class="text-[11px] font-black text-slate-900 uppercase tracking-tighter">{{ new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) }}</div>
-                        <div class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{{ new Date(log.date).toLocaleDateString(undefined, { weekday: 'long' }) }}</div>
+                        <div class="text-sm font-black text-slate-900 uppercase tracking-tighter">{{ new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) }}</div>
+                        <div class="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">{{ new Date(log.date).toLocaleDateString(undefined, { weekday: 'long' }) }}</div>
                       </div>
                       <div class="text-right">
-                        <div class="text-sm font-black tracking-tighter" :class="log.totalSales >= 0 ? 'text-emerald-600' : 'text-rose-600'">
+                        <div class="text-base font-black tracking-tighter" :class="log.totalSales >= 0 ? 'text-emerald-600' : 'text-rose-600'">
                           ${{ log.totalSales.toFixed(2) }}
                         </div>
-                        <div class="text-[8px] text-slate-400 font-black uppercase tracking-widest">Net Sales</div>
+                        <div class="text-xs text-slate-400 font-black uppercase tracking-widest">Net Sales</div>
                       </div>
                    </div>
 
                    <!-- Status & Submitter Info -->
                    <div class="mt-4 flex items-center justify-between border-t border-slate-50 pt-4">
                       <div class="flex items-center gap-2">
-                        <div class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[8px] font-black text-slate-500 border border-slate-200">
+                        <div class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-xs font-black text-slate-500 border border-slate-200">
                           {{ log.submittedBy?.[0]?.toUpperCase() || '?' }}
                         </div>
-                        <span class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{{ log.submittedBy || 'Manual Entry' }}</span>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">{{ log.submittedBy || 'Manual Entry' }}</span>
                       </div>
                       
                       <div class="flex items-center gap-2">
                         <span 
-                          class="px-2 py-0.5 rounded-full text-[7px] font-black uppercase tracking-[0.1em]"
+                          class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-[0.1em]"
                           :class="log.status === 'PENDING_REVIEW' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'"
                         >
                           {{ log.status === 'PENDING_REVIEW' ? 'Pending Rev' : 'Verified' }}
@@ -537,7 +537,7 @@ const totalSalesThisMonth = computed(() => {
                 </div>
                 <div v-if="filteredLogs.length === 0" class="text-center py-20">
                    <Clock class="w-10 h-10 text-slate-100 mx-auto mb-4" />
-                   <p class="text-[10px] text-slate-300 font-black uppercase tracking-widest">Empty Archives Control</p>
+                   <p class="text-sm text-slate-300 font-black uppercase tracking-widest">Empty Archives Control</p>
                 </div>
              </div>
           </div>
@@ -582,7 +582,7 @@ const totalSalesThisMonth = computed(() => {
                                 {{ activeAuditType === 'opening' ? 'Opening Cash Audit' : 
                                    activeAuditType === 'closing' ? 'Shift Closing Count' : 'Vault Cash / Deposit' }}
                             </h2>
-                            <p class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Wide-View Precision Denomination Registry</p>
+                            <p class="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Wide-View Precision Denomination Registry</p>
                         </div>
                     </div>
                     <button 
@@ -607,13 +607,13 @@ const totalSalesThisMonth = computed(() => {
                     
                     <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6 p-8 bg-white/50 rounded-[2.5rem] border border-slate-100">
                          <div>
-                            <h4 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <h4 class="text-xs font-black text-slate-900 uppercase tracking-widest mb-2 flex items-center gap-2">
                                <Sparkles class="w-3 h-3 text-amber-500" /> Audit Best Practices
                             </h4>
-                            <p class="text-[11px] text-slate-500 font-bold leading-relaxed">Please verify each denomination twice before closing. The system accounts for both loose and rolled coins automatically.</p>
+                            <p class="text-sm text-slate-500 font-bold leading-relaxed">Please verify each denomination twice before closing. The system accounts for both loose and rolled coins automatically.</p>
                          </div>
                          <div class="text-right">
-                             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Running Session Total</p>
+                             <p class="text-xs font-black text-slate-400 uppercase tracking-widest">Running Session Total</p>
                              <p class="text-3xl font-black text-slate-900 tabular-nums">${{ 
                                 (activeAuditType === 'opening' ? (currentLogForm.openingCash || 0) : (activeAuditType === 'closing' ? (currentLogForm.closingCash || 0) : (currentLogForm.safeCash || 0))).toFixed(2) 
                              }}</p>

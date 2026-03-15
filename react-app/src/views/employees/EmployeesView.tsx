@@ -149,7 +149,7 @@ const EmployeesView: React.FC = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 className="text-2xl font-bold font-display text-slate-900">Employee Management</h2>
-                    <p className="text-slate-500 text-sm">Manage your store staff, positions, and payroll details.</p>
+                    <p className="text-slate-500 text-base">Manage your store staff, positions, and payroll details.</p>
                 </div>
                 <button onClick={() => openModal()} className="btn-primary flex items-center justify-center gap-2">
                     <Plus className="w-4 h-4" />
@@ -164,7 +164,7 @@ const EmployeesView: React.FC = () => {
                         <Users className="w-6 h-6" />
                     </div>
                     <div>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Staff</p>
+                        <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Total Staff</p>
                         <p className="text-2xl font-black text-slate-900">{employees.length}</p>
                     </div>
                 </div>
@@ -173,7 +173,7 @@ const EmployeesView: React.FC = () => {
                         <CheckCircle className="w-6 h-6" />
                     </div>
                     <div>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Active</p>
+                        <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Active</p>
                         <p className="text-2xl font-black text-slate-900">{activeEmployeesCount}</p>
                     </div>
                 </div>
@@ -182,7 +182,7 @@ const EmployeesView: React.FC = () => {
                         <Briefcase className="w-6 h-6" />
                     </div>
                     <div>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Positions</p>
+                        <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Positions</p>
                         <p className="text-2xl font-black text-slate-900">{uniquePositionsCount}</p>
                     </div>
                 </div>
@@ -228,7 +228,7 @@ const EmployeesView: React.FC = () => {
                                     </div>
                                     <div>
                                         <h3 className="font-bold text-slate-900">{employee.firstName} {employee.lastName}</h3>
-                                        <p className="text-xs font-medium text-primary-600 uppercase tracking-wider">{employee.position}</p>
+                                        <p className="text-sm font-medium text-primary-600 uppercase tracking-wider">{employee.position}</p>
                                     </div>
                                 </div>
                                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -258,12 +258,12 @@ const EmployeesView: React.FC = () => {
 
                             <div className="mt-6 grid grid-cols-2 gap-4 border-t border-slate-50 pt-4">
                                 <div className="flex flex-col">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Hourly Rate</span>
-                                    <span className="text-sm font-bold text-slate-900">${(employee.hourlyRate || 0).toFixed(2)}/hr</span>
+                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Hourly Rate</span>
+                                    <span className="text-base font-bold text-slate-900">${(employee.hourlyRate || 0).toFixed(2)}/hr</span>
                                 </div>
                                 <div className="flex flex-col text-right">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Total Hours</span>
-                                    <span className="text-sm font-black text-slate-900 flex items-center justify-end gap-1">
+                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Total Hours</span>
+                                    <span className="text-base font-black text-slate-900 flex items-center justify-end gap-1">
                                         <Clock className="w-3 h-3 text-slate-400" />
                                         {employee.id ? (employeeHours[employee.id] || 0).toFixed(2) : '0.00'}
                                     </span>
@@ -272,13 +272,13 @@ const EmployeesView: React.FC = () => {
 
                             <div className="mt-4 flex justify-between items-center">
                                 <span
-                                    className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${employee.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}
+                                    className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest ${employee.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}
                                 >
                                     {employee.status}
                                 </span>
                                 <button
                                     onClick={() => openScorecard(employee)}
-                                    className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary-600 hover:text-primary-700 transition-colors"
+                                    className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-primary-600 hover:text-primary-700 transition-colors"
                                 >
                                     <Award className="w-3.5 h-3.5" />
                                     View Analytics
@@ -301,7 +301,7 @@ const EmployeesView: React.FC = () => {
                                 </div>
                                 <div>
                                     <h3 className="text-3xl font-black text-slate-900 uppercase italic tracking-tighter">{selectedEmployeeForScorecard.firstName} {selectedEmployeeForScorecard.lastName}</h3>
-                                    <p className="text-[10px] font-black text-primary-600 uppercase tracking-widest">Operational Vector Analytics</p>
+                                    <p className="text-xs font-black text-primary-600 uppercase tracking-widest">Operational Vector Analytics</p>
                                 </div>
                             </div>
                             <button onClick={() => setShowScorecardModal(false)} className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all">
@@ -315,7 +315,7 @@ const EmployeesView: React.FC = () => {
                             />
 
                             <div className="mt-8 flex gap-4">
-                                <button onClick={() => setShowScorecardModal(false)} className="flex-1 py-5 bg-slate-900 text-white rounded-3xl font-black uppercase text-xs tracking-widest shadow-xl shadow-slate-900/20 hover:scale-[1.02] active:scale-[0.98] transition-all">Close Report</button>
+                                <button onClick={() => setShowScorecardModal(false)} className="flex-1 py-5 bg-slate-900 text-white rounded-3xl font-black uppercase text-sm tracking-widest shadow-xl shadow-slate-900/20 hover:scale-[1.02] active:scale-[0.98] transition-all">Close Report</button>
                                 <button className="px-8 py-5 border-2 border-slate-100 rounded-3xl text-slate-400 hover:text-slate-900 hover:border-slate-200 transition-all">
                                     <Filter className="w-5 h-5" />
                                 </button>
@@ -338,23 +338,23 @@ const EmployeesView: React.FC = () => {
                         <form onSubmit={handleSubmit} className="p-6 space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">First Name</label>
+                                    <label className="text-sm font-bold text-slate-500 uppercase tracking-wider ml-1">First Name</label>
                                     <input value={employeeForm.firstName} onChange={e => setEmployeeForm({ ...employeeForm, firstName: e.target.value })} type="text" required className="input-field w-full" placeholder="John" />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Last Name</label>
+                                    <label className="text-sm font-bold text-slate-500 uppercase tracking-wider ml-1">Last Name</label>
                                     <input value={employeeForm.lastName} onChange={e => setEmployeeForm({ ...employeeForm, lastName: e.target.value })} type="text" required className="input-field w-full" placeholder="Doe" />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Email Address</label>
+                                    <label className="text-sm font-bold text-slate-500 uppercase tracking-wider ml-1">Email Address</label>
                                     <input value={employeeForm.email} onChange={e => setEmployeeForm({ ...employeeForm, email: e.target.value })} type="email" required className="input-field w-full" placeholder="john@example.com" />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Phone Number</label>
+                                    <label className="text-sm font-bold text-slate-500 uppercase tracking-wider ml-1">Phone Number</label>
                                     <input value={employeeForm.phone} onChange={e => setEmployeeForm({ ...employeeForm, phone: e.target.value })} type="tel" required className="input-field w-full" placeholder="(555) 000-0000" />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Position</label>
+                                    <label className="text-sm font-bold text-slate-500 uppercase tracking-wider ml-1">Position</label>
                                     <select value={employeeForm.position} onChange={e => setEmployeeForm({ ...employeeForm, position: e.target.value })} required className="input-field w-full">
                                         <option value="">Select Position...</option>
                                         <option value="Store Manager">Store Manager</option>
@@ -365,26 +365,26 @@ const EmployeesView: React.FC = () => {
                                     </select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Hourly Rate ($)</label>
+                                    <label className="text-sm font-bold text-slate-500 uppercase tracking-wider ml-1">Hourly Rate ($)</label>
                                     <input value={employeeForm.hourlyRate} onChange={e => setEmployeeForm({ ...employeeForm, hourlyRate: parseFloat(e.target.value) || 0 })} type="number" step="0.01" required className="input-field w-full" />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Hire Date</label>
+                                    <label className="text-sm font-bold text-slate-500 uppercase tracking-wider ml-1">Hire Date</label>
                                     <input value={employeeForm.hireDate} onChange={e => setEmployeeForm({ ...employeeForm, hireDate: e.target.value })} type="date" required className="input-field w-full" />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Status</label>
+                                    <label className="text-sm font-bold text-slate-500 uppercase tracking-wider ml-1">Status</label>
                                     <select value={employeeForm.status} onChange={e => setEmployeeForm({ ...employeeForm, status: e.target.value as 'Active' | 'Inactive' })} className="input-field w-full">
                                         <option value="Active">Active</option>
                                         <option value="Inactive">Inactive</option>
                                     </select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Clock-In PIN</label>
+                                    <label className="text-sm font-bold text-slate-500 uppercase tracking-wider ml-1">Clock-In PIN</label>
                                     <input value={employeeForm.pin} onChange={e => setEmployeeForm({ ...employeeForm, pin: e.target.value })} type="text" maxLength={4} placeholder="1234" className="input-field w-full font-mono tracking-widest" />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">System Role</label>
+                                    <label className="text-sm font-bold text-slate-500 uppercase tracking-wider ml-1">System Role</label>
                                     <select value={employeeForm.role} onChange={e => setEmployeeForm({ ...employeeForm, role: e.target.value as any })} required className="input-field w-full">
                                         <option value="Admin">Admin</option>
                                         <option value="Manager">Manager</option>

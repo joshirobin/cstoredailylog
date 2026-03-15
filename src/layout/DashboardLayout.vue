@@ -111,8 +111,8 @@ onMounted(async () => {
             <transition name="page">
                 <div v-if="showNotifications" class="absolute right-0 mt-4 w-96 bg-white/90 backdrop-blur-3xl border border-white/40 rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] z-50 overflow-hidden">
                     <div class="p-6 border-b border-slate-100/50 flex items-center justify-between bg-slate-50/50">
-                        <h3 class="font-black text-xs text-slate-900 uppercase tracking-widest italic">Live Feed</h3>
-                        <button @click="markAllAsRead" class="text-[10px] text-primary-600 hover:text-primary-700 font-black uppercase tracking-widest underline">Mark All As Read</button>
+                        <h3 class="font-black text-sm text-slate-900 uppercase tracking-widest italic">Live Feed</h3>
+                        <button @click="markAllAsRead" class="text-xs text-primary-600 hover:text-primary-700 font-black uppercase tracking-widest underline">Mark All As Read</button>
                     </div>
                     <div class="max-h-[30rem] overflow-y-auto custom-scrollbar">
                         <div v-if="notifications.length === 0" class="p-10 text-center text-slate-400 italic text-sm font-medium">
@@ -131,10 +131,10 @@ onMounted(async () => {
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center justify-between mb-1">
-                                        <p class="text-xs font-black text-slate-900 truncate uppercase tracking-tight">{{ notif.title }}</p>
-                                        <span class="text-[9px] font-bold text-slate-400 uppercase">{{ notif.time }}</span>
+                                        <p class="text-sm font-black text-slate-900 truncate uppercase tracking-tight">{{ notif.title }}</p>
+                                        <span class="text-xs font-bold text-slate-400 uppercase">{{ notif.time }}</span>
                                     </div>
-                                    <p class="text-[11px] text-slate-500 font-medium line-clamp-2 leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">{{ notif.message }}</p>
+                                    <p class="text-xs text-slate-500 font-medium line-clamp-2 leading-relaxed opacity-90 group-hover:opacity-100 transition-opacity">{{ notif.message }}</p>
                                 </div>
                             </div>
                             <button @click="clearNotification(notif.id)" class="absolute top-5 right-2 opacity-0 group-hover:opacity-100 p-1.5 text-slate-300 hover:text-rose-600 transition-colors">
@@ -154,8 +154,8 @@ onMounted(async () => {
               {{ userInitials }}
             </div>
             <div class="hidden md:block">
-              <div class="text-sm font-black text-slate-900 leading-none mb-1 group-hover:text-primary-600 transition-colors uppercase tracking-tight">{{ userName }}</div>
-              <div class="text-[9px] text-secondary-600 font-black uppercase tracking-[0.2em] opacity-80">
+              <div class="text-base font-black text-slate-900 leading-none mb-1 group-hover:text-primary-600 transition-colors uppercase tracking-tight">{{ userName }}</div>
+              <div class="text-xs text-secondary-600 font-black uppercase tracking-[0.2em] opacity-90">
                 {{ authStore.userRole || 'User' }}
               </div>
             </div>

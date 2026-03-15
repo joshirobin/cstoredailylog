@@ -151,7 +151,7 @@ const removePaidOut = (idx: number) => {
             {id: 6, title: 'Verify & Sign', icon: CheckSquare}
         ]" :key="step.id" 
         @click="activeStep = step.id"
-        class="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+        class="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all"
         :class="activeStep === step.id ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20' : 'bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-900'"
         >
             <component :is="step.icon" class="w-4 h-4" />
@@ -266,7 +266,7 @@ const removePaidOut = (idx: number) => {
                     <div class="flex justify-between items-center"><label class="text-sm text-slate-600">Actual Checks in Drawer</label> <input v-if="props.isEditable" type="number" step="0.01" v-model.number="pdi.actualCheckCounted" class="w-24 p-1 text-right border border-slate-300 rounded text-sky-700"><span class="view-val inline-block text-right w-24" v-else>${{ (pdi.actualCheckCounted || 0).toFixed(2) }}</span></div>
                     <div class="flex justify-between items-center"><label class="text-sm text-amber-600">Closing Float Kept <span class="text-xs ml-1">(info only)</span></label> <input v-if="props.isEditable" type="number" step="0.01" v-model.number="pdi.closingFloat" class="w-24 p-1 text-right border border-amber-200 bg-amber-50 rounded"><span class="view-val inline-block text-right w-24 text-amber-600" v-else>${{ (pdi.closingFloat || 0).toFixed(2) }}</span></div>
                     
-                    <div class="text-[10px] font-bold text-slate-400 mt-2 mb-1 uppercase tracking-wider">Cash Already Removed</div>
+                    <div class="text-xs font-bold text-slate-400 mt-2 mb-1 uppercase tracking-wider">Cash Already Removed</div>
                     <div class="flex justify-between items-center"><label class="text-sm text-slate-600">Bank Deposit Done</label> <input v-if="props.isEditable" type="number" step="0.01" v-model.number="pdi.bankDeposit" class="w-24 p-1 text-right border border-slate-300 rounded"><span class="view-val inline-block text-right w-24" v-else>${{ (pdi.bankDeposit || 0).toFixed(2) }}</span></div>
                     <div class="flex justify-between items-center"><label class="text-sm text-slate-600">Safe Drops Done</label> <input v-if="props.isEditable" type="number" step="0.01" v-model.number="pdi.safeDrops" class="w-24 p-1 text-right border border-slate-300 rounded"><span class="view-val inline-block text-right w-24" v-else>${{ (pdi.safeDrops || 0).toFixed(2) }}</span></div>
                     
@@ -346,7 +346,7 @@ const removePaidOut = (idx: number) => {
             </tbody>
         </table>
         <div class="mt-4 flex justify-between items-center">
-            <button v-if="props.isEditable" @click="addPaidOut" class="badge bg-emerald-600 text-[10px] cursor-pointer hover:bg-emerald-700 transition">➕ Add Row</button>
+            <button v-if="props.isEditable" @click="addPaidOut" class="badge bg-emerald-600 text-xs cursor-pointer hover:bg-emerald-700 transition">➕ Add Row</button>
             <div class="text-right flex-1"><strong>TOTAL PAID OUT: $ <span>{{ paidOutsTotal.toFixed(2) }}</span></strong></div>
         </div>
     </div>
@@ -438,13 +438,13 @@ const removePaidOut = (idx: number) => {
 
     <!-- Wizard Navigation Buttons -->
     <div class="flex items-center justify-between mt-8 pt-6 border-t border-slate-100" v-if="props.isEditable">
-       <button @click="activeStep--" :disabled="activeStep === 1" class="flex items-center gap-2 px-6 py-3 rounded-2xl bg-slate-50 text-slate-500 font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all disabled:opacity-50">
+       <button @click="activeStep--" :disabled="activeStep === 1" class="flex items-center gap-2 px-6 py-3 rounded-2xl bg-slate-50 text-slate-500 font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all disabled:opacity-50">
            <ArrowLeft class="w-4 h-4" /> Previous Step
        </button>
-       <button v-if="activeStep < 6" @click="activeStep++" class="flex items-center gap-2 px-6 py-3 rounded-2xl bg-primary-600 text-white font-black text-[10px] uppercase tracking-widest hover:bg-primary-700 transition-all shadow-lg shadow-primary-500/20">
+       <button v-if="activeStep < 6" @click="activeStep++" class="flex items-center gap-2 px-6 py-3 rounded-2xl bg-primary-600 text-white font-black text-xs uppercase tracking-widest hover:bg-primary-700 transition-all shadow-lg shadow-primary-500/20">
            Next Step <ArrowRight class="w-4 h-4" />
        </button>
-       <div v-else class="text-[10px] font-black text-emerald-500 uppercase tracking-widest px-6 py-3">
+       <div v-else class="text-xs font-black text-emerald-500 uppercase tracking-widest px-6 py-3">
            Ready to Save Below
        </div>
     </div>
@@ -471,7 +471,7 @@ const removePaidOut = (idx: number) => {
 .badge {
     background: #0f172a;
     color: white;
-    font-size: 0.7rem;
+    font-size: 0.85rem;
     font-weight: 600;
     padding: 4px 12px;
     border-radius: 40px;
@@ -504,7 +504,7 @@ const removePaidOut = (idx: number) => {
     min-width: 140px;
 }
 .field label {
-    font-size: 0.7rem;
+    font-size: 0.85rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -579,7 +579,7 @@ const removePaidOut = (idx: number) => {
 }
 .input-row label {
     font-weight: 700;
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     color: #475569;
     margin-bottom: 6px;
 }
@@ -626,7 +626,7 @@ const removePaidOut = (idx: number) => {
 }
 .table-paidout th {
     text-align: left;
-    font-size: 0.7rem;
+    font-size: 0.85rem;
     font-weight: 800;
     text-transform: uppercase;
     color: #64748b;

@@ -70,16 +70,16 @@ if (props.isEditable) {
     </div>
 
     <!-- Header Info -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 text-xs font-bold text-slate-700">
-      <div><span class="text-slate-400 uppercase tracking-widest block text-[10px]">Store Name:</span> {{ locationsStore.activeLocation?.name || 'N/A' }}</div>
-      <div><span class="text-slate-400 uppercase tracking-widest block text-[10px]">Store #:</span> __________</div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 text-sm font-bold text-slate-700">
+      <div><span class="text-slate-400 uppercase tracking-widest block text-xs">Store Name:</span> {{ locationsStore.activeLocation?.name || 'N/A' }}</div>
+      <div><span class="text-slate-400 uppercase tracking-widest block text-xs">Store #:</span> __________</div>
       <div>
-         <span class="text-slate-400 uppercase tracking-widest block text-[10px]">Date:</span> 
+         <span class="text-slate-400 uppercase tracking-widest block text-xs">Date:</span> 
          <span v-if="!isEditable">{{ props.log.date }}</span>
          <input v-else type="date" v-model="props.log.date" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-sm outline-none" />
       </div>
       <div>
-        <span class="text-slate-400 uppercase tracking-widest block text-[10px]">Shift:</span> 
+        <span class="text-slate-400 uppercase tracking-widest block text-xs">Shift:</span> 
         <span v-if="!isEditable">{{ props.log.shift || 'Full Day' }}</span>
         <select v-else v-model="props.log.shift" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-sm outline-none w-full">
             <option value="Morning">Morning</option>
@@ -89,7 +89,7 @@ if (props.isEditable) {
         </select>
       </div>
       <div class="col-span-2">
-         <span class="text-slate-400 uppercase tracking-widest block text-[10px]">Manager on Duty:</span> 
+         <span class="text-slate-400 uppercase tracking-widest block text-xs">Manager on Duty:</span> 
          <span v-if="!isEditable">{{ props.log.managerOnDuty || '____________' }}</span>
          <input v-else type="text" v-model="props.log.managerOnDuty" placeholder="Manager Name" class="bg-slate-50 w-full border border-slate-200 rounded-lg px-2 py-1 text-sm outline-none" />
       </div>
@@ -198,7 +198,7 @@ if (props.isEditable) {
         </div>
 
         <div class="mt-8 max-w-sm mx-auto bg-slate-900 text-white rounded-2xl p-6 shadow-xl">
-           <h3 class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 text-center">CASH BALANCE</h3>
+           <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 text-center">CASH BALANCE</h3>
            <div class="space-y-2 text-sm font-medium">
              <div class="flex justify-between items-center text-slate-300">
                  <span>Actual Cash Counted</span> 
@@ -277,7 +277,7 @@ if (props.isEditable) {
             <h2 class="text-sm font-black text-slate-900 uppercase tracking-widest mb-4 pb-2 border-b border-slate-100">3. FUEL SALES SUMMARY</h2>
             <table class="w-full text-sm">
                 <thead>
-                    <tr class="text-[10px] text-slate-400 uppercase tracking-widest text-left"><th class="font-black pb-2">Item</th><th class="font-black pb-2">Gallons</th><th class="text-right font-black pb-2">Amount</th></tr>
+                    <tr class="text-xs text-slate-400 uppercase tracking-widest text-left"><th class="font-black pb-2">Item</th><th class="font-black pb-2">Gallons</th><th class="text-right font-black pb-2">Amount</th></tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100" v-if="props.log.fuelSalesSummary">
                     <tr class="h-10">
@@ -413,13 +413,13 @@ if (props.isEditable) {
             <section>
                 <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
                     <h2 class="text-sm font-black text-slate-900 uppercase tracking-widest ">6. PAID OUT LOG</h2>
-                    <button v-if="isEditable" @click="addPaidOut" class="text-[10px] text-primary-600 uppercase font-black tracking-widest flex items-center gap-1 hover:bg-slate-50 px-2 py-1 rounded">
+                    <button v-if="isEditable" @click="addPaidOut" class="text-xs text-primary-600 uppercase font-black tracking-widest flex items-center gap-1 hover:bg-slate-50 px-2 py-1 rounded">
                         <Plus class="w-3 h-3" /> Add Record
                     </button>
                 </div>
                 <div class="border border-slate-200 rounded-xl overflow-hidden">
                     <table class="w-full text-sm text-left">
-                        <thead class="bg-slate-50 text-[10px] uppercase font-black tracking-widest text-slate-500">
+                        <thead class="bg-slate-50 text-xs uppercase font-black tracking-widest text-slate-500">
                             <tr>
                                 <th class="p-3">Time</th>
                                 <th class="p-3 w-1/2">Description</th>
@@ -459,7 +459,7 @@ if (props.isEditable) {
                         </tbody>
                         <tfoot class="bg-slate-50">
                             <tr>
-                                <td colspan="2" class="p-3 text-right font-black text-slate-900 uppercase text-[10px] tracking-widest">Total Paid Out:</td>
+                                <td colspan="2" class="p-3 text-right font-black text-slate-900 uppercase text-xs tracking-widest">Total Paid Out:</td>
                                 <td class="p-3 text-right font-black text-slate-900 pb-2 pt-2">
                                    <span v-if="!isEditable">${{ (props.log.totalPaidOut || 0).toFixed(2) }}</span>
                                    <input v-else type="number" v-model.number="props.log.totalPaidOut" class="w-full text-right bg-slate-200 border-none rounded px-2 py-1 font-bold" />
@@ -503,7 +503,7 @@ if (props.isEditable) {
                     </tbody>
                 </table>
                 <div class="bg-slate-50 p-4 rounded-xl text-sm font-black text-slate-600 flex items-center gap-3">
-                    <span class="text-[10px] uppercase tracking-widest text-slate-400 block mb-1">Deposit Bag #</span>
+                    <span class="text-xs uppercase tracking-widest text-slate-400 block mb-1">Deposit Bag #</span>
                     <span v-if="!isEditable" class="font-mono text-base">{{ props.log.depositSummary?.depositBagNumber || '___________________' }}</span>
                     <input v-else type="text" v-model="props.log.depositSummary!.depositBagNumber" class="bg-white border border-slate-200 rounded-lg px-2 py-1 font-mono outline-none" placeholder="Bag Num" />
                 </div>
@@ -556,21 +556,21 @@ if (props.isEditable) {
                        <span v-if="!isEditable">{{ props.log.signatures.cashierSignature || '' }}</span>
                        <input v-else type="text" v-model="props.log.signatures.cashierSignature" class="bg-transparent border-none text-center outline-none italic w-full text-primary-600 font-bold" placeholder="Type name..." />
                    </div>
-                   <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center mt-2">Cashier Signature</p>
+                   <p class="text-xs font-black uppercase tracking-widest text-slate-400 text-center mt-2">Cashier Signature</p>
                 </div>
                 <div>
                    <div class="h-16 border-b-2 border-slate-300 flex items-end pb-2 justify-center italic text-primary-600 font-bold">
                        <span v-if="!isEditable">{{ props.log.signatures.managerSignature || '' }}</span>
                        <input v-else type="text" v-model="props.log.signatures.managerSignature" class="bg-transparent border-none text-center outline-none italic w-full text-primary-600 font-bold" placeholder="Type name..." />
                    </div>
-                   <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center mt-2">Manager Signature</p>
+                   <p class="text-xs font-black uppercase tracking-widest text-slate-400 text-center mt-2">Manager Signature</p>
                 </div>
                 <div>
                    <div class="h-16 border-b-2 border-slate-300 flex items-end pb-2 justify-center text-slate-700 font-black">
                        <span v-if="!isEditable">{{ props.log.signatures.date || '' }}</span>
                        <input v-else type="date" v-model="props.log.signatures.date" class="bg-transparent border-none text-center outline-none w-full" />
                    </div>
-                   <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center mt-2">Date Signed</p>
+                   <p class="text-xs font-black uppercase tracking-widest text-slate-400 text-center mt-2">Date Signed</p>
                 </div>
             </div>
         </section>
