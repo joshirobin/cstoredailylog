@@ -114,7 +114,7 @@ export const useEmployeesStore = defineStore('employees', () => {
                 body: JSON.stringify({
                     to: employee.email,
                     subject: 'Welcome to the Workforce Hub! - Action Required',
-                    body: `Hi ${employee.firstName},\n\nWelcome to the team! Your employee profile has been created.\n\nTo access the Workforce Hub, please create your account and verify your email by clicking the link below:\n\n${window.location.origin}/signup?email=${encodeURIComponent(employee.email)}&role=${encodeURIComponent(employee.role || 'Cashier')}&name=${encodeURIComponent(employee.firstName + ' ' + employee.lastName)}\n\nAfter registration, you will receive a verification email. You must verify your email before logging in.\n\nBest regards,\nManagement`
+                    body: `Hi ${employee.firstName},\n\nWelcome to the team! Your employee profile has been created.\n\nTo access the Workforce Hub, please create your password by clicking the link below:\n\n${window.location.origin}/signup?email=${encodeURIComponent(employee.email)}&role=${encodeURIComponent(employee.role || 'Cashier')}&name=${encodeURIComponent(employee.firstName + ' ' + employee.lastName)}\n\nYour preliminary access PIN for Clock-In is: ${employee.pin || 'Contact Admin'}\n\nAfter setting your password, you will receive a verification email. Once verified, you can log in to see your schedule, checklists, and more.\n\nBest regards,\nManagement`
                 }),
             });
 

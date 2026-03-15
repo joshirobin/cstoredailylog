@@ -222,15 +222,17 @@ export const useAuthStore = defineStore('auth', () => {
 
             await setDoc(newDocRef, {
                 ...existingData, // Preserve existing admin-set data (hourlyRate, position, etc)
-                name, // Update name if user provided a better one? Or keep admin's? Let's authorize user's input for name
+                name,
                 email,
-                role: (existingData as any).role || role, // Prefer existing role if set by admin
+                role: (existingData as any).role || role,
                 createdAt: (existingData as any).createdAt || serverTimestamp(),
                 uid: userCredential.user.uid,
                 status: 'Active',
-                // Ensure critical fields are set if missing
+                // Explicitly merge/set names
                 firstName: name.split(' ')[0] || (existingData as any).firstName || '',
-                lastName: name.split(' ').slice(1).join(' ') || (existingData as any).lastName || ''
+                lastName: name.split(' ').slice(1).join(' ') || (existingData as any).lastName || '',
+                // Ensure PIN is preserved if existed
+                pin: (existingData as any).pin || ''
             });
 
             // If we migrated from an old doc, delete the old one to avoid duplicates
