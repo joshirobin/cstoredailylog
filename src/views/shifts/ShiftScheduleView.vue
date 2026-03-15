@@ -131,7 +131,8 @@ const newShift = ref({
     endTime: '14:00',
     role: 'Cashier',
     notes: '',
-    status: 'Scheduled' as Shift['status']
+    status: 'Scheduled' as Shift['status'],
+    endDate: ''
 });
 
 // Role Colors
@@ -210,7 +211,8 @@ const openAddShift = (dateStr?: string, empId?: string) => {
         endTime: '14:00',
         role: 'Cashier',
         notes: '',
-        status: 'Scheduled'
+        status: 'Scheduled',
+        endDate: safeDate
     };
     isModalOpen.value = true;
 };
@@ -225,7 +227,8 @@ const editShift = (shift: Shift) => {
         endTime: shift.endTime.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
         role: shift.role,
         notes: shift.notes || '',
-        status: shift.status
+        status: shift.status,
+        endDate: dateStr
     };
     isModalOpen.value = true;
 };
@@ -237,39 +240,73 @@ const handleDeleteShift = async () => {
         isModalOpen.value = false;
     }
 };
-
 const handleSaveShift = async () => {
     if (!newShift.value.employeeId || !newShift.value.date) return;
-
-    const start = new Date(`${newShift.value.date}T${newShift.value.startTime}`);
-    let end = new Date(`${newShift.value.date}T${newShift.value.endTime}`);
-    if (end < start) end.setDate(end.getDate() + 1);
-
-    const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-    const currentHours = getEmployeeWeeklyHours(newShift.value.employeeId, start);
-    const projectedTotal = currentHours + duration;
-
-    if (projectedTotal > 40) {
-        if (!confirm(`⚠️ OVERTIME WARNING ⚠️\n\nEmployee will exceed 40 hours (Projected: ${projectedTotal.toFixed(1)}h).\n\nAuthorize?`)) return;
-    }
-
     const emp = employeeStore.employees.find(e => e.id === newShift.value.employeeId);
-    const shiftData = {
-        employeeId: newShift.value.employeeId,
-        employeeName: emp ? `${emp.firstName} ${emp.lastName}` : 'Unknown',
-        startTime: Timestamp.fromDate(start),
-        endTime: Timestamp.fromDate(end),
-        role: newShift.value.role,
-        status: newShift.value.status,
-        notes: newShift.value.notes,
-        isOvertime: projectedTotal > 40
-    };
+    if (!emp) return;
+    
+    // Determine dates to save
+    const datesToSave: string[] = [];
+    const startDateObj = new Date(newShift.value.date);
+    const endDateObj = newShift.value.endDate ? new Date(newShift.value.endDate) : startDateObj;
+    
+    // If it's a new shift and endDate is further than startDate, we create multiple
+    if (!editingShiftId.value && endDateObj > startDateObj) {
+        let current = new Date(startDateObj);
+        while (current <= endDateObj) {
+            datesToSave.push(current.toISOString().split('T')[0]!);
+            current.setDate(current.getDate() + 1);
+        }
+    } else {
+        datesToSave.push(newShift.value.date);
+    }
 
     try {
         if (editingShiftId.value) {
-            await shiftStore.updateShift(editingShiftId.value, shiftData);
+            const start = new Date(`${newShift.value.date}T${newShift.value.startTime}`);
+            let end = new Date(`${newShift.value.date}T${newShift.value.endTime}`);
+            if (end < start) end.setDate(end.getDate() + 1);
+
+            const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+            const currentHours = getEmployeeWeeklyHours(newShift.value.employeeId as string, start);
+            const projectedTotal = currentHours + duration;
+
+            if (projectedTotal > 40) {
+                if (!confirm(`⚠️ OVERTIME WARNING ⚠️\n\nEmployee will exceed 40 hours.\n\nAuthorize?`)) return;
+            }
+
+            await shiftStore.updateShift(editingShiftId.value, {
+                employeeId: newShift.value.employeeId,
+                employeeName: `${emp.firstName} ${emp.lastName}`,
+                startTime: Timestamp.fromDate(start),
+                endTime: Timestamp.fromDate(end),
+                role: newShift.value.role,
+                status: newShift.value.status,
+                notes: newShift.value.notes,
+                isOvertime: projectedTotal > 40
+            });
         } else {
-            await shiftStore.addShift(shiftData);
+            // Save one or more shifts
+            for (const dateStr of datesToSave) {
+                const start = new Date(`${dateStr}T${newShift.value.startTime}`);
+                let end = new Date(`${dateStr}T${newShift.value.endTime}`);
+                if (end < start) end.setDate(end.getDate() + 1);
+
+                const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+                const currentHours = getEmployeeWeeklyHours(newShift.value.employeeId as string, start);
+                const projectedTotal = currentHours + duration;
+
+                await shiftStore.addShift({
+                    employeeId: newShift.value.employeeId,
+                    employeeName: `${emp.firstName} ${emp.lastName}`,
+                    startTime: Timestamp.fromDate(start),
+                    endTime: Timestamp.fromDate(end),
+                    role: newShift.value.role,
+                    status: newShift.value.status,
+                    notes: newShift.value.notes,
+                    isOvertime: projectedTotal > 40
+                });
+            }
         }
         isModalOpen.value = false;
     } catch (e) {
@@ -972,13 +1009,31 @@ const getShiftDetails = (id: string) => {
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5 block">Date</label>
+                                <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5 block">Start Date</label>
                                 <input type="date" v-model="newShift.date" class="w-full p-3 rounded-xl border-2 border-slate-100 text-sm font-bold" />
                             </div>
+                            <div v-if="!editingShiftId">
+                                <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5 block">End Date (Batch)</label>
+                                <input type="date" v-model="newShift.endDate" :min="newShift.date" class="w-full p-3 rounded-xl border-2 border-slate-100 text-sm font-bold" />
+                            </div>
+                            <div v-else>
+                                <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5 block">Role</label>
+                                <select v-model="newShift.role" class="w-full p-3 rounded-xl border-2 border-slate-100 text-sm font-bold">
+                                    <option v-for="(_, role) in roleColors" :key="role" :value="role">{{ role }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4" v-if="!editingShiftId">
                             <div>
                                 <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5 block">Role</label>
                                 <select v-model="newShift.role" class="w-full p-3 rounded-xl border-2 border-slate-100 text-sm font-bold">
                                     <option v-for="(_, role) in roleColors" :key="role" :value="role">{{ role }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5 block">Shift Status</label>
+                                <select v-model="newShift.status" class="w-full p-3 rounded-xl border-2 border-slate-100 text-sm font-bold bg-white">
+                                    <option v-for="status in ['Scheduled', 'Published']" :key="status" :value="status">{{ status }}</option>
                                 </select>
                             </div>
                         </div>
