@@ -168,6 +168,32 @@ export const useEmployeesStore = defineStore('employees', () => {
             // Don't throw here to avoid blocking the main flow
         }
     };
+    const sendScheduleEmail = async (employee: Employee, body: string, dateRange: string) => {
+        try {
+            const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001';
+            const response = await fetch(`${apiBaseUrl}/api/send-email`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    to: employee.email,
+                    subject: `Work Schedule Update: ${dateRange}`,
+                    body: body
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to send schedule email');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error in sendScheduleEmail:', error);
+            throw error;
+        }
+    };
 
     return {
         employees,
@@ -177,7 +203,8 @@ export const useEmployeesStore = defineStore('employees', () => {
         updateEmployee,
         deleteEmployee,
         sendWelcomeEmail,
-        sendClockOutEmail
+        sendClockOutEmail,
+        sendScheduleEmail
     };
 });
 

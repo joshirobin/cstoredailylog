@@ -167,11 +167,75 @@ const isNotifying = ref(false);
 
 const handleNotifyEmployees = async () => {
     isNotifying.value = true;
-    // Simulate API call to send SMS/Email
-    setTimeout(() => {
+    try {
+        let start: Date = new Date();
+        let end: Date = new Date();
+        let dateRangeStr: string = '';
+
+        if (activeTab.value === 'Calendar') {
+            const year = currentMonth.value.getFullYear();
+            const month = currentMonth.value.getMonth();
+            start = new Date(year, month, 1);
+            end = new Date(year, month + 1, 0);
+            dateRangeStr = (currentMonth.value as Date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        } else {
+            const wDays = weekDays.value;
+            if (wDays.length < 7) {
+                isNotifying.value = false;
+                return;
+            }
+            start = wDays[0] as Date;
+            end = wDays[6] as Date;
+            dateRangeStr = formatDateRange.value;
+        }
+
+        if (!start || !end) return;
+
+        const shifts = shiftStore.shifts.filter(s => {
+            const sTime = s.startTime.toDate();
+            const safeEnd = new Date(end!);
+            safeEnd.setHours(23, 59, 59, 999);
+            return sTime >= start! && sTime <= safeEnd;
+        });
+
+        const groupedByEmployee = shifts.reduce((acc, s) => {
+            if (!acc[s.employeeId]) acc[s.employeeId] = [];
+            acc[s.employeeId]!.push(s);
+            return acc;
+        }, {} as Record<string, Shift[]>);
+
+        let count = 0;
+        for (const empId in groupedByEmployee) {
+            const emp = employeeStore.employees.find(e => e.id === empId);
+            if (emp && emp.email) {
+                const empShifts = groupedByEmployee[empId]!.sort((a,b) => a.startTime.toDate().getTime() - b.startTime.toDate().getTime());
+                let scheduleBody = `Hi ${emp.firstName},\n\nHere is your work schedule for ${dateRangeStr}:\n\n`;
+                
+                empShifts.forEach(s => {
+                    const date = s.startTime.toDate().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                    const startT = s.startTime.toDate().toLocaleTimeString([], {hour: 'numeric', minute:'2-digit'});
+                    const endT = s.endTime.toDate().toLocaleTimeString([], {hour: 'numeric', minute:'2-digit'});
+                    scheduleBody += `- ${date}: ${startT} - ${endT} (${s.role})\n`;
+                });
+
+                scheduleBody += `\nPlease let us know if you have any questions.\n\nBest regards,\nWorkforce Hub Management`;
+                
+                await employeeStore.sendScheduleEmail(emp, scheduleBody, dateRangeStr);
+                count++;
+            }
+        }
+        
+        if (count === 0) {
+            alert('No shifts found for the current period or employees are missing email addresses.');
+        } else {
+            alert(`✅ Success! Notifications sent to ${count} scheduled staff members.`);
+        }
+    } catch (e) {
+        console.error(e);
+        alert('❌ Error: Failed to send notifications.');
+    } finally {
         isNotifying.value = false;
-        alert('✅ Success! Notifications sent to all scheduled staff via Email and SMS.');
-    }, 2000);
+    }
 };
 
 const handlePrint = () => {
