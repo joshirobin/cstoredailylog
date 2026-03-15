@@ -130,6 +130,36 @@ export const useEmployeesStore = defineStore('employees', () => {
         }
     };
 
+    const sendClockOutEmail = async (employee: Employee, log: any) => {
+        try {
+            const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001';
+            const clockIn = log.clockIn.toDate().toLocaleString();
+            const clockOut = log.clockOut.toDate().toLocaleString();
+            
+            const response = await fetch(`${apiBaseUrl}/api/send-email`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    to: employee.email,
+                    subject: 'Shift Completion Summary - Workforce Hub',
+                    body: `Hi ${employee.firstName},\n\nYou have successfully clocked out. Here is your shift summary:\n\n- Clock In: ${clockIn}\n- Clock Out: ${clockOut}\n- Total Duration: ${log.totalHours} hours\n\nThank you for your hard work today!\n\nBest regards,\nWorkforce Hub Management`
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to send clock-out email');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error in sendClockOutEmail:', error);
+            // Don't throw here to avoid blocking the main flow
+        }
+    };
+
     return {
         employees,
         loading,
@@ -137,7 +167,8 @@ export const useEmployeesStore = defineStore('employees', () => {
         addEmployee,
         updateEmployee,
         deleteEmployee,
-        sendWelcomeEmail
+        sendWelcomeEmail,
+        sendClockOutEmail
     };
 });
 

@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { db } from '../firebaseConfig';
 import { collection, addDoc, getDocs, query, orderBy, where, doc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { useLocationsStore } from './locations';
+import { useEmployeesStore } from './employees';
 
 export interface TimeLog {
     id: string;
@@ -129,6 +130,15 @@ export const useTimesheetsStore = defineStore('timesheets', () => {
             });
 
             await fetchTimeLogs(employeeId, skipFetchCheck);
+
+            // Send notification
+            const employeesStore = useEmployeesStore();
+            const employee = employeesStore.employees.find((e: any) => e.id === employeeId);
+            const updatedLog = timeLogs.value.find(l => l.id === logId);
+            
+            if (employee && updatedLog && employee.email) {
+                await employeesStore.sendClockOutEmail(employee, updatedLog);
+            }
         } catch (error) {
             console.error('Failed to clock out:', error);
             throw error;
