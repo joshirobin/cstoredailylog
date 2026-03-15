@@ -106,6 +106,9 @@ export const useEmployeesStore = defineStore('employees', () => {
     const sendWelcomeEmail = async (employee: Employee) => {
         try {
             const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001';
+            const locationsStore = useLocationsStore();
+            const storeName = locationsStore.activeLocation?.name || 'our store';
+            
             const response = await fetch(`${apiBaseUrl}/api/send-email`, {
                 method: 'POST',
                 headers: {
@@ -113,8 +116,18 @@ export const useEmployeesStore = defineStore('employees', () => {
                 },
                 body: JSON.stringify({
                     to: employee.email,
-                    subject: 'Welcome to the Workforce Hub! - Action Required',
-                    body: `Hi ${employee.firstName},\n\nWelcome to the team! Your employee profile has been created.\n\nTo access the Workforce Hub, please create your password by clicking the link below:\n\n${window.location.origin}/signup?email=${encodeURIComponent(employee.email)}&role=${encodeURIComponent(employee.role || 'Cashier')}&name=${encodeURIComponent(employee.firstName + ' ' + employee.lastName)}\n\nYour preliminary access PIN for Clock-In is: ${employee.pin || 'Contact Admin'}\n\nAfter setting your password, you will receive a verification email. Once verified, you can log in to see your schedule, checklists, and more.\n\nBest regards,\nManagement`
+                    subject: `Welcome to the team at ${storeName}!`,
+                    body: `Hi ${employee.firstName},\n\n` +
+                          `Welcome to the team! We are excited to have you join us at ${storeName}.\n\n` +
+                          `Your digital employee portal is ready. Please follow these steps to get started:\n\n` +
+                          `1. ACTIVATE ACCOUNT: Click the link below to create your secure password:\n` +
+                          `${window.location.origin}/signup?email=${encodeURIComponent(employee.email)}&role=${encodeURIComponent(employee.role || 'Cashier')}&name=${encodeURIComponent(employee.firstName + ' ' + employee.lastName)}\n\n` +
+                          `2. CLOCK-IN PIN: Your unique PIN for the onsite terminal is: ${employee.pin || 'Check with your Manager'}\n\n` +
+                          `3. VERIFY EMAIL: After setting your password, look for a confirmation email to verify your identity.\n\n` +
+                          `Once logged in, you can view your schedule, complete daily tasks, and track your hours from any device.\n\n` +
+                          `We look forward to working with you!\n\n` +
+                          `Best regards,\n` +
+                          `${storeName} Management`
                 }),
             });
 
