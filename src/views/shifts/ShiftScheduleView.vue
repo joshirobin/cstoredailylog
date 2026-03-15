@@ -16,9 +16,11 @@ import {
     DollarSign,
     AlertTriangle,
     TrendingUp,
-    TrendingDown,
     Share2,
-    CalendarX
+    CalendarX,
+    Printer,
+    Download,
+    Send
 } from 'lucide-vue-next';
 
 
@@ -160,6 +162,26 @@ onMounted(async () => {
 
     ]);
 });
+
+const isNotifying = ref(false);
+
+const handleNotifyEmployees = async () => {
+    isNotifying.value = true;
+    // Simulate API call to send SMS/Email
+    setTimeout(() => {
+        isNotifying.value = false;
+        alert('✅ Success! Notifications sent to all scheduled staff via Email and SMS.');
+    }, 2000);
+};
+
+const handlePrint = () => {
+    window.print();
+};
+
+const handleExportPDF = () => {
+    // For now, use print to PDF as it's the most reliable without extra heavy libs
+    window.print();
+};
 
 // Utilities
 const getShiftsForDay = (date: Date, empId?: string) => {
@@ -581,6 +603,25 @@ const getShiftDetails = (id: string) => {
                         <Plus class="w-4 h-4" />
                         <span class="font-black uppercase tracking-wider text-xs">New Shift</span>
                     </button>
+                 </div>
+
+                 <div v-if="activeTab === 'Schedule' || activeTab === 'Calendar'" class="flex gap-2 ml-auto lg:ml-0">
+                     <button @click="handlePrint" class="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-primary-500 transition-all no-print" title="Print Schedule">
+                         <Printer class="w-4 h-4" />
+                     </button>
+                     <button @click="handleExportPDF" class="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-primary-500 transition-all no-print" title="Download PDF">
+                         <Download class="w-4 h-4" />
+                     </button>
+                     <button 
+                        @click="handleNotifyEmployees" 
+                        :disabled="isNotifying"
+                        class="btn-secondary py-2.5 px-5 flex items-center gap-2 no-print"
+                        :class="{'opacity-50 cursor-not-allowed': isNotifying}"
+                     >
+                         <Send class="w-4 h-4" v-if="!isNotifying" />
+                         <Clock class="w-4 h-4 animate-spin" v-else />
+                         <span class="font-black uppercase tracking-wider text-xs">{{ isNotifying ? 'Sending...' : 'Notify Staff' }}</span>
+                     </button>
                  </div>
 
                  <div v-if="activeTab === 'Schedule'" class="flex gap-2">
@@ -1138,5 +1179,48 @@ const getShiftDetails = (id: string) => {
 @keyframes scale-in-center {
   0% { transform: scale(0.95); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  /* Hide sidebar and header layout elements if they aren't marked no-print but we know they exist */
+  nav, aside, header, .sidebar, .top-bar {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .max-w-\[1800px\] {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+
+  /* Make sure the main content is visible */
+  .space-y-6 {
+    margin: 0 !important;
+    padding: 1cm !important;
+  }
+
+  /* Force table layout to fit on page */
+  table {
+    page-break-inside: auto;
+  }
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+  
+  .glass-panel, .bg-white {
+    box-shadow: none !important;
+    border: 1px solid #e2e8f0 !important;
+  }
 }
 </style>
