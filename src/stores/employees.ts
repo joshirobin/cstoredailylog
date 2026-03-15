@@ -144,7 +144,15 @@ export const useEmployeesStore = defineStore('employees', () => {
                 body: JSON.stringify({
                     to: employee.email,
                     subject: 'Shift Completion Summary - Workforce Hub',
-                    body: `Hi ${employee.firstName},\n\nYou have successfully clocked out. Here is your shift summary:\n\n- Clock In: ${clockIn}\n- Clock Out: ${clockOut}\n- Total Duration: ${log.totalHours} hours\n\nThank you for your hard work today!\n\nBest regards,\nWorkforce Hub Management`
+                    body: `Hi ${employee.firstName},\n\nYou have successfully clocked out. Here is your shift summary:\n\n` +
+                          `- Store: ${log.locationName || 'Unknown Store'}\n` +
+                          `- Role: ${employee.position}\n` +
+                          `- Clock In: ${clockIn}\n` +
+                          `- Clock Out: ${clockOut}\n` +
+                          `- Total Duration: ${log.totalHours} hours\n` +
+                          (log.isLate ? `- Note: Late for ${log.lateMinutes} mins\n` : '') +
+                          `- Estimated Pay: $${(Number(log.totalHours) * employee.hourlyRate).toFixed(2)}\n\n` +
+                          `Thank you for your hard work today!\n\nBest regards,\nWorkforce Hub Management`
                 }),
             });
 

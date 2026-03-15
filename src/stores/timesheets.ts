@@ -111,6 +111,7 @@ export const useTimesheetsStore = defineStore('timesheets', () => {
     const clockOut = async (logId: string, employeeId: string, customEndTime?: Timestamp, skipFetchCheck: boolean = false) => {
         try {
             const logRef = doc(db, 'timesheets', logId);
+            const locationsStore = useLocationsStore();
             const endTime = customEndTime || Timestamp.now();
 
             // Find current log to calculate hours
@@ -126,7 +127,8 @@ export const useTimesheetsStore = defineStore('timesheets', () => {
             await updateDoc(logRef, {
                 clockOut: Timestamp.fromDate(finalClockOutDate),
                 totalHours: Number(hours.toFixed(2)),
-                status: 'Completed'
+                status: 'Completed',
+                locationName: locationsStore.activeLocation?.name || 'Unknown Store'
             });
 
             await fetchTimeLogs(employeeId, skipFetchCheck);
