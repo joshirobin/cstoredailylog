@@ -29,7 +29,8 @@ const employeeStore = useEmployeesStore();
 const timesheetsStore = useTimesheetsStore();
 
 // UI State
-const activeTab = ref('Schedule');
+// UI State
+const activeTab = ref<'Schedule' | 'Calendar' | 'Time Off' | 'Swaps' | 'Reports' | 'Availability'>('Schedule');
 const isModalOpen = ref(false);
 const isAvailabilityModalOpen = ref(false);
 const isSwapModalOpen = ref(false);
@@ -40,6 +41,48 @@ const swapRecipientId = ref<string>('');
 
 const tempAvailability = ref<any[]>([]);
 const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const shortDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// Calendar View State
+const currentMonth = ref(new Date());
+
+const calendarDays = computed(() => {
+    const year = currentMonth.value.getFullYear();
+    const month = currentMonth.value.getMonth();
+    
+    // First day of interest
+    const firstDayOfMonth = new Date(year, month, 1);
+    
+    // Calculate leading days (from previous month)
+    const startOffset = firstDayOfMonth.getDay();
+    const startDate = new Date(firstDayOfMonth);
+    startDate.setDate(startDate.getDate() - startOffset);
+    
+    const days = [];
+    const totalCells = 42; // 6 rows * 7 days
+    
+    for (let i = 0; i < totalCells; i++) {
+        const d = new Date(startDate);
+        d.setDate(d.getDate() + i);
+        days.push({
+            date: d,
+            isCurrentMonth: d.getMonth() === month,
+            isToday: d.toDateString() === new Date().toDateString(),
+            dateString: d.toISOString().split('T')[0]
+        });
+    }
+    return days;
+});
+
+const navigateMonth = (dir: number) => {
+    const d = new Date(currentMonth.value);
+    d.setMonth(d.getMonth() + dir);
+    currentMonth.value = d;
+};
+
+const formatMonth = computed(() => {
+    return currentMonth.value.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+});
 
 
 // Calendar State
@@ -442,7 +485,7 @@ const getShiftDetails = (id: string) => {
                 <h2 class="text-4xl font-black font-display text-slate-900 uppercase italic tracking-tighter">Workforce Hub</h2>
                 <div class="flex gap-4 mt-4 border-b border-slate-100">
                     <button 
-                        v-for="tab in ['Schedule', 'Time Off', 'Swaps', 'Reports', 'Availability']" 
+                        v-for="tab in (['Schedule', 'Calendar', 'Time Off', 'Swaps', 'Reports', 'Availability'] as const)" 
                         :key="tab"
                         @click="activeTab = tab"
                         class="pb-2 text-sm font-black uppercase tracking-widest border-b-2 transition-colors px-2"
@@ -455,8 +498,8 @@ const getShiftDetails = (id: string) => {
             </div>
 
             <!-- Dashboard Tools -->
-            <div v-if="activeTab === 'Schedule'" class="flex flex-wrap items-center gap-3">
-                 <div class="flex items-center gap-3 mr-2">
+            <div class="flex flex-wrap items-center gap-3">
+                 <div v-if="activeTab === 'Schedule'" class="flex items-center gap-3 mr-2">
                      <div class="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-100 shadow-sm">
                         <Clock class="w-3.5 h-3.5 text-primary-500" />
                         <span class="text-xs font-black text-slate-700 uppercase tracking-tighter">{{ totalWeeklyHours.toFixed(1) }}h</span>
@@ -482,7 +525,28 @@ const getShiftDetails = (id: string) => {
                     </button>
                  </div>
 
-                 <div class="flex gap-2">
+                 <div v-if="activeTab === 'Calendar'" class="flex items-center gap-3">
+                     <div class="flex items-center bg-slate-100/50 rounded-xl p-1">
+                        <button @click="navigateMonth(-1)" class="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-slate-900 transition-all">
+                            <ChevronLeft class="w-4 h-4" />
+                        </button>
+                        <div class="px-4 flex items-center gap-2">
+                             <Calendar class="w-3.5 h-3.5 text-slate-400" />
+                            <span class="text-xs font-black text-slate-900 uppercase tracking-widest min-w-[150px] text-center">
+                                {{ formatMonth }}
+                            </span>
+                        </div>
+                         <button @click="navigateMonth(1)" class="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-slate-900 transition-all">
+                            <ChevronRight class="w-4 h-4" />
+                        </button>
+                     </div>
+                     <button @click="openAddShift()" class="btn-primary py-2.5 px-5 flex items-center gap-2 shadow-lg shadow-primary-500/10">
+                        <Plus class="w-4 h-4" />
+                        <span class="font-black uppercase tracking-wider text-xs">New Shift</span>
+                    </button>
+                 </div>
+
+                 <div v-if="activeTab === 'Schedule'" class="flex gap-2">
                      <button @click="copyPreviousWeek" class="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-primary-500 transition-all" title="Copy Previous">
                          <Copy class="w-4 h-4" />
                      </button>
@@ -572,6 +636,62 @@ const getShiftDetails = (id: string) => {
                         </tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- TAB CONTENT: CALENDAR -->
+        <div v-if="activeTab === 'Calendar'" class="bg-white border border-slate-100 shadow-sm rounded-3xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <div class="grid grid-cols-7 border-b border-slate-100">
+                <div v-for="day in shortDays" :key="day" class="py-3 text-center">
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{{ day }}</span>
+                </div>
+            </div>
+            <div class="grid grid-cols-7 group">
+                <div 
+                    v-for="cell in calendarDays" 
+                    :key="cell.dateString"
+                    class="min-h-[140px] border-b border-r border-slate-100 p-2 transition-colors hover:bg-slate-50/50 flex flex-col gap-1 relative group/cell"
+                    :class="{ 'bg-slate-50/30': !cell.isCurrentMonth }"
+                >
+                    <div class="flex justify-between items-center mb-1">
+                        <span 
+                            class="w-7 h-7 flex items-center justify-center rounded-lg text-xs font-black transition-all"
+                            :class="[
+                                cell.isToday ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/20' : '',
+                                cell.isCurrentMonth ? 'text-slate-900' : 'text-slate-300'
+                            ]"
+                        >
+                            {{ cell.date.getDate() }}
+                        </span>
+                        <button 
+                            @click="openAddShift(cell.dateString)"
+                            class="p-1 hover:bg-primary-50 rounded text-primary-400 opacity-0 group-hover/cell:opacity-100 transition-all"
+                        >
+                            <Plus class="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+                    
+                    <div class="flex flex-col gap-1 flex-1 overflow-y-auto custom-scrollbar pr-0.5">
+                        <div 
+                            v-for="shift in getShiftsForDay(cell.date)" 
+                            :key="shift.id"
+                            @click="editShift(shift)"
+                            class="p-1.5 rounded-lg border cursor-pointer hover:shadow-sm transition-all relative overflow-hidden group/shift"
+                            :class="[`bg-${getRoleColor(shift.role)}-50`, `border-${getRoleColor(shift.role)}-100`]"
+                        >
+                            <div :class="`absolute left-0 top-0 bottom-0 w-1 bg-${getRoleColor(shift.role)}-500`"></div>
+                            <div class="flex flex-col pl-1.5 overflow-hidden">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[9px] font-black text-slate-900 uppercase truncate leading-tight">{{ getEmployeeName(shift.employeeId) }}</span>
+                                    <span :class="`text-[8px] font-black uppercase text-${getRoleColor(shift.role)}-600`">{{ shift.role }}</span>
+                                </div>
+                                <div class="text-[10px] font-bold text-slate-500">
+                                    {{ formatTime(shift.startTime) }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
