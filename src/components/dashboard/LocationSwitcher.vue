@@ -22,14 +22,14 @@ const selectLocation = (id: string) => {
   <div class="relative">
     <button 
       @click="isOpen = !isOpen"
-      class="flex items-center gap-4 px-5 py-2.5 bg-slate-800/40 backdrop-blur-md hover:bg-slate-800/60 rounded-2xl transition-all duration-300 border border-white/5 hover:border-primary-500/30 hover:shadow-2xl hover:shadow-primary-500/5 group"
+      class="flex items-center gap-4 px-5 py-2.5 bg-white/50 backdrop-blur-md hover:bg-white rounded-2xl transition-all duration-300 border border-slate-200/50 hover:border-primary-500/30 hover:shadow-xl hover:shadow-primary-500/5 group"
     >
       <div class="w-10 h-10 rounded-xl bg-primary-600 shadow-lg shadow-primary-500/20 flex items-center justify-center text-white group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500">
         <Store class="w-5 h-5" />
       </div>
       <div class="text-left hidden lg:block">
-        <p class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] leading-none mb-1.5">Active Store</p>
-        <p class="text-sm font-black text-white leading-none tracking-tight">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1.5">Active Store</p>
+        <p class="text-sm font-black text-slate-900 leading-none tracking-tight">
           {{ locationsStore.activeLocation?.name || 'Loading Store...' }}
         </p>
       </div>

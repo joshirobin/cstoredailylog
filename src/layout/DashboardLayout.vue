@@ -70,7 +70,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="flex min-h-screen bg-slate-950 text-slate-100 transition-colors duration-500">
+  <div class="flex min-h-screen bg-slate-50 text-slate-900">
     <!-- Sidebar -->
     <Sidebar />
     <NotificationCenter />
@@ -79,7 +79,7 @@ onMounted(async () => {
     <!-- Main Content Area -->
     <div class="flex-1 flex flex-col min-w-0">
       <!-- Top Header -->
-      <header class="h-20 border-b border-white/5 bg-slate-900/40 backdrop-blur-2xl sticky top-0 z-30 flex items-center justify-between px-10 shadow-lg shadow-black/20">
+      <header class="h-20 border-b border-white/20 bg-white/70 backdrop-blur-2xl sticky top-0 z-30 flex items-center justify-between px-10 shadow-sm">
         <div class="flex items-center gap-6 flex-1">
           <!-- Location Switcher -->
           <LocationSwitcher v-if="!locationsStore.activeLocation?.disabledFeatures?.includes('store-selector')" />
@@ -90,7 +90,7 @@ onMounted(async () => {
             <input 
               type="text" 
               placeholder="Search anything..." 
-              class="w-full bg-slate-800/40 border-2 border-white/5 rounded-2xl py-3 pl-12 pr-4 text-sm font-bold text-white focus:bg-slate-800/60 focus:border-primary-500/30 focus:ring-4 focus:ring-primary-500/10 outline-none transition-all placeholder:text-slate-500"
+              class="w-full bg-slate-100/50 border-2 border-transparent rounded-2xl py-3 pl-12 pr-4 text-sm font-bold focus:bg-white focus:border-primary-500/20 focus:ring-4 focus:ring-primary-500/5 outline-none transition-all placeholder:text-slate-400"
             >
           </div>
         </div>

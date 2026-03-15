@@ -136,7 +136,7 @@ const toggleSubmenu = (name: string) => {
 </script>
 
 <template>
-  <aside class="flex flex-col w-72 bg-slate-900/60 backdrop-blur-3xl border-r border-white/5 h-screen sticky top-0 z-40">
+  <aside class="flex flex-col w-72 bg-white/70 backdrop-blur-2xl border-r border-white/20 h-screen sticky top-0 z-40">
     <div class="px-8 py-6">
       <div class="flex items-center justify-center group cursor-pointer">
         <img :src="logoUrl" alt="CStoreSync Logo" class="w-9 h-auto object-contain transition-transform duration-500 group-hover:scale-105" />

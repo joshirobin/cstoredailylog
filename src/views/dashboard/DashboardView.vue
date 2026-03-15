@@ -468,14 +468,14 @@ const greeting = computed(() => {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: #64748b;
+  color: #94a3b8;
   margin: 0 0 0.25rem 0;
 }
 
 .store-title {
   font-size: 1.85rem;
   font-weight: 900;
-  color: #f8fafc;
+  color: #0f172a;
   letter-spacing: -0.04em;
   margin: 0 0 0.35rem 0;
   line-height: 1;
@@ -487,7 +487,7 @@ const greeting = computed(() => {
   gap: 0.4rem;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #64748b;
+  color: #94a3b8;
   margin: 0;
 }
 
@@ -557,9 +557,9 @@ const greeting = computed(() => {
 }
 
 .kpi-card {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 1.5rem;
+  background: white;
+  border: 1px solid #f1f5f9;
+  border-radius: 1.25rem;
   padding: 1.25rem 1.4rem;
   display: flex;
   align-items: center;
